@@ -59,6 +59,51 @@ namespace Constants {
     constexpr int STATUS_PANEL_HEIGHT = 100;
     constexpr int STATUS_LINE_HEIGHT = 12;
 
+    // Item list box settings
+    constexpr int ITEM_LIST_BOX_X = 8;
+    constexpr int ITEM_LIST_BOX_Y = 8;
+    constexpr int ITEM_LIST_BOX_WIDTH = 180;
+    constexpr int ITEM_LIST_BOX_HEIGHT = 112;  // 8 rows * 12 + padding * 2
+    constexpr int ITEM_LIST_ITEM_HEIGHT = 12;
+    constexpr int ITEM_LIST_CURSOR_OFFSET = 4;
+    constexpr int ITEM_LIST_QUANTITY_X_OFFSET = 140;  // X offset for quantity display
+
+    // Save slot box settings
+    constexpr int SAVE_SLOT_BOX_X = 40;
+    constexpr int SAVE_SLOT_BOX_Y = 40;
+    constexpr int SAVE_SLOT_BOX_WIDTH = 240;
+    constexpr int SAVE_SLOT_BOX_HEIGHT = 160;
+    constexpr int SAVE_SLOT_HEIGHT = 40;  // Height of each slot row
+    constexpr int SAVE_SLOT_CURSOR_OFFSET = 4;
+    constexpr int SAVE_SLOT_TITLE_HEIGHT = 20;
+
+    // Battle box settings
+    // Command box (bottom-left)
+    constexpr int BATTLE_COMMAND_BOX_X = 8;
+    constexpr int BATTLE_COMMAND_BOX_Y = INTERNAL_HEIGHT - 80;
+    constexpr int BATTLE_COMMAND_BOX_WIDTH = 80;
+    constexpr int BATTLE_COMMAND_BOX_HEIGHT = 72;
+    constexpr int BATTLE_COMMAND_ITEM_HEIGHT = 16;
+    constexpr int BATTLE_CURSOR_OFFSET = 4;
+
+    // Message box (bottom, right of command box)
+    constexpr int BATTLE_MESSAGE_BOX_X = BATTLE_COMMAND_BOX_X + BATTLE_COMMAND_BOX_WIDTH + 8;
+    constexpr int BATTLE_MESSAGE_BOX_Y = INTERNAL_HEIGHT - 48;
+    constexpr int BATTLE_MESSAGE_BOX_WIDTH = INTERNAL_WIDTH - BATTLE_MESSAGE_BOX_X - 8;
+    constexpr int BATTLE_MESSAGE_BOX_HEIGHT = 40;
+
+    // Status box (top-right)
+    constexpr int BATTLE_STATUS_BOX_X = INTERNAL_WIDTH - 88;
+    constexpr int BATTLE_STATUS_BOX_Y = 8;
+    constexpr int BATTLE_STATUS_BOX_WIDTH = 80;
+    constexpr int BATTLE_STATUS_BOX_HEIGHT = 32;
+
+    // Enemy display area (upper-center)
+    constexpr int BATTLE_ENEMY_AREA_X = 96;
+    constexpr int BATTLE_ENEMY_AREA_Y = 32;
+    constexpr int BATTLE_ENEMY_AREA_WIDTH = 128;
+    constexpr int BATTLE_ENEMY_AREA_HEIGHT = 96;
+
     // Window title
     constexpr const char* WINDOW_TITLE = "RPG Seed";
 }

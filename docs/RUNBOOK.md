@@ -33,6 +33,7 @@ make clean && make
 - Arrow keys move the player
 - Z/Enter interacts with NPCs (triggers dialogue)
 - ESC/Space/M opens pause menu
+- Random encounters trigger in dungeon areas
 - Window close button exits the game
 
 ## Controls
@@ -40,9 +41,16 @@ make clean && make
 | Key | Action |
 |-----|--------|
 | Arrow Keys / WASD | Move player |
-| Z / Enter | Confirm / Interact with NPC |
+| Z / Enter | Confirm / Interact / Advance dialogue |
 | X / Backspace | Cancel / Close menu |
 | ESC / Space / M | Open/Close menu |
+
+### Battle Controls
+
+| Key | Action |
+|-----|--------|
+| Up/Down | Select battle command |
+| Z / Enter | Confirm command / Advance message |
 
 ## Testing
 
@@ -53,22 +61,35 @@ make test
 
 ### Expected Output
 ```
-[==========] Running 101 tests from 11 test suites.
+[==========] Running 551 tests from 43 test suites.
 ...
-[  PASSED  ] 101 tests.
+[  PASSED  ] 551 tests.
 ```
 
 ### Test Suites
-| Test File | Count | Purpose |
-|-----------|-------|---------|
-| `test_vec2.cpp` | 12 | Vector math operations |
-| `test_tile.cpp` | 12 | Tile types and properties |
-| `test_map.cpp` | 9 | Map loading and queries |
-| `test_collision.cpp` | 11 | Movement and collision |
-| `test_dialogue.cpp` | 11 | DialogueState state machine |
-| `test_npc.cpp` | 16 | NPC entity and Map integration |
-| `test_menu.cpp` | 17 | MenuState state machine |
-| `test_player_stats.cpp` | 13 | PlayerStats immutability |
+
+| Test File | Purpose |
+|-----------|---------|
+| `test_vec2.cpp` | Vector math operations |
+| `test_tile.cpp` | Tile types and properties |
+| `test_map.cpp` | Map loading and queries |
+| `test_collision.cpp` | Movement and collision |
+| `test_dialogue.cpp` | DialogueState state machine |
+| `test_npc.cpp` | NPC entity and Map integration |
+| `test_menu.cpp` | MenuState state machine |
+| `test_player_stats.cpp` | PlayerStats immutability |
+| `test_camera.cpp` | Camera boundary clamping |
+| `test_item.cpp` | Item definition and properties |
+| `test_inventory.cpp` | Inventory add/remove/use operations |
+| `test_item_list.cpp` | ItemListBox UI selection |
+| `test_save.cpp` | SaveData serialization |
+| `test_save_manager.cpp` | SaveManager file operations |
+| `test_save_slot.cpp` | SaveSlotState UI |
+| `test_enemy.cpp` | Enemy definitions and EnemyDatabase |
+| `test_damage_calc.cpp` | DamageCalculator formulas |
+| `test_battle_state.cpp` | BattleState state machine |
+| `test_battle_box.cpp` | BattleBox UI rendering |
+| `test_encounter.cpp` | EncounterManager random battles |
 
 ## Common Issues and Fixes
 
@@ -165,6 +186,9 @@ lldb ./rpg_seed
 #### Menu/Dialogue Tests Failing
 **Check**: Ensure state transitions are using immutable patterns (returning new objects)
 
+#### Save Tests Failing
+**Check**: Ensure temp directory has write permissions, verify checksum calculation
+
 ## Performance Monitoring
 
 ### Frame Rate
@@ -196,6 +220,23 @@ top -pid $(pgrep rpg_seed)
 | Fonts | `./assets/fonts/` |
 | Source code | `./src/` |
 | Tests | `./tests/` |
+| Save files | `./saves/` |
+
+## Save System
+
+### Save File Location
+Save files are stored in `./saves/` directory with naming convention `save_X.dat` where X is the slot index (0-2).
+
+### Save File Format
+- Binary format with version header and CRC checksum
+- Maximum file size: 1MB
+- Contains: player stats, inventory, map path, position, direction, play time, timestamp
+
+### Save File Corruption
+If save files become corrupted:
+1. Checksum validation will reject the file
+2. `load()` returns `std::nullopt` for corrupted saves
+3. Delete corrupted save file to free the slot
 
 ## Cleanup
 
@@ -208,6 +249,11 @@ make clean
 ```bash
 make clean
 rm -rf build/
+```
+
+### Clear Save Data
+```bash
+rm -rf saves/
 ```
 
 ## Version Information
@@ -234,5 +280,24 @@ brew info googletest
 | 1 | Field System (movement, collision, camera, map transitions) | Complete |
 | 2 | NPC/Dialogue System (NPCs, dialogue state machine, interaction) | Complete |
 | 3 | Menu System (pause menu, status display, player stats) | Complete |
-| 4 | Inventory System | Planned |
-| 5 | Save/Load System | Planned |
+| 4 | Inventory System (Item, ItemDatabase, Inventory, ItemListBox) | Complete |
+| 5 | Save/Load System (SaveManager, SaveData, SaveSlotInfo) | Complete |
+| 6 | Battle System (Enemy, BattleState, DamageCalculator, EncounterManager) | Complete |
+
+## Architecture Notes
+
+### Immutability Pattern
+All state classes (GameState, Player, BattleState, MenuState, DialogueState, etc.) are immutable. State updates return new objects:
+```cpp
+GameState newState = gameState->update(direction, map);
+BattleState afterAttack = battle.selectAttack(damage, isCritical);
+```
+
+### Singleton Databases
+- `ItemDatabase::instance()` - item definitions
+- `EnemyDatabase::instance()` - enemy definitions
+
+### State Machine Phases
+- **BattleState**: Inactive -> Encounter -> CommandSelect -> PlayerAction/EnemyAction -> Victory/Defeat/Escaped
+- **MenuState**: Closed -> Open (with sub-states for Item, Save, Status)
+- **DialogueState**: Inactive -> Active (with page index)

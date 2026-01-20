@@ -112,12 +112,12 @@ TEST_F(MenuStateTest, InactiveMoveDoesNothing) {
     EXPECT_FALSE(movedDown.isActive());
 }
 
-TEST_F(MenuStateTest, ItemsDisabled) {
-    EXPECT_FALSE(MenuState::isItemEnabled(MenuItem::Items));
+TEST_F(MenuStateTest, ItemsEnabled) {
+    EXPECT_TRUE(MenuState::isItemEnabled(MenuItem::Items));
 }
 
-TEST_F(MenuStateTest, SaveDisabled) {
-    EXPECT_FALSE(MenuState::isItemEnabled(MenuItem::Save));
+TEST_F(MenuStateTest, SaveEnabled) {
+    EXPECT_TRUE(MenuState::isItemEnabled(MenuItem::Save));
 }
 
 TEST_F(MenuStateTest, StatusEnabled) {

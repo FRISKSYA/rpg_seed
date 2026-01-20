@@ -28,6 +28,15 @@ sdl2-config --version
 clang++ --version
 ```
 
+## Build Commands
+
+| Command | Description |
+|---------|-------------|
+| `make` | Build release executable |
+| `make debug` | Build with debug symbols (-g -DDEBUG) |
+| `make test` | Build and run all unit tests |
+| `make clean` | Remove all build artifacts |
+
 ## Development Workflow
 
 ### Building
@@ -101,7 +110,10 @@ void add(int dx, int dy) {
 | `src/field/` | Map and tile system (Map, Tile, TileSet, Camera) |
 | `src/system/` | SDL2 wrappers (Renderer, Input, ResourceManager) |
 | `src/entity/` | Game entities (NPC, NPCData) |
-| `src/ui/` | User interface (DialogueBox, MenuBox, StatusPanel, TextRenderer) |
+| `src/ui/` | User interface (DialogueBox, MenuBox, StatusPanel, TextRenderer, ItemListBox, SaveSlotBox, BattleBox) |
+| `src/inventory/` | Inventory system (Item, ItemDatabase, Inventory) |
+| `src/save/` | Save/Load system (SaveManager, SaveData, SaveSlotInfo) |
+| `src/battle/` | Battle system (Enemy, EnemyDatabase, BattleState, DamageCalculator, EncounterManager) |
 | `src/util/` | Utilities (Vec2, Constants) |
 | `data/maps/` | Map CSV files |
 | `assets/` | Graphics and assets |
@@ -138,6 +150,19 @@ void add(int dx, int dy) {
 4. Update `MenuState::isItemEnabled()` and `getItemName()`
 5. Write unit tests in `tests/test_menu.cpp`
 
+### Adding a New Item
+
+1. Add item definition in `ItemDatabase::initializeItems()` (`src/inventory/ItemDatabase.h`)
+2. Use `ItemDefinition::create()` factory method
+3. Write unit tests in `tests/test_item.cpp`
+
+### Adding a New Enemy
+
+1. Add enemy definition in `EnemyDatabase::initializeEnemies()` (`src/battle/EnemyDatabase.h`)
+2. Use `EnemyDefinition::create()` factory method
+3. Update `getEnemyTier()` to set spawn area level
+4. Write unit tests in `tests/test_enemy.cpp`
+
 ### Adding New Tests
 
 1. Create test file in `tests/` directory
@@ -166,12 +191,29 @@ lldb ./rpg_seed
 
 Target: 80%+ coverage on core logic
 
-Current test suites (101 tests total):
-- `test_vec2.cpp` - Vec2 math operations (12 tests)
-- `test_tile.cpp` - Tile types and properties (12 tests)
-- `test_map.cpp` - Map loading and queries (9 tests)
-- `test_collision.cpp` - Movement and collision (11 tests)
-- `test_dialogue.cpp` - DialogueState state machine (11 tests)
-- `test_npc.cpp` - NPC entity and Map NPC integration (16 tests)
-- `test_menu.cpp` - MenuState state machine (17 tests)
-- `test_player_stats.cpp` - PlayerStats immutability (13 tests)
+Current: **551 tests** across **43 test suites** (20 test files)
+
+### Test Files
+
+| Test File | Purpose |
+|-----------|---------|
+| `test_vec2.cpp` | Vec2 math operations |
+| `test_tile.cpp` | Tile types and properties |
+| `test_map.cpp` | Map loading and queries |
+| `test_collision.cpp` | Movement and collision |
+| `test_dialogue.cpp` | DialogueState state machine |
+| `test_npc.cpp` | NPC entity and Map integration |
+| `test_menu.cpp` | MenuState state machine |
+| `test_player_stats.cpp` | PlayerStats immutability |
+| `test_camera.cpp` | Camera boundary clamping |
+| `test_item.cpp` | Item definition and properties |
+| `test_inventory.cpp` | Inventory add/remove/use operations |
+| `test_item_list.cpp` | ItemListBox UI selection |
+| `test_save.cpp` | SaveData serialization |
+| `test_save_manager.cpp` | SaveManager file operations |
+| `test_save_slot.cpp` | SaveSlotState UI |
+| `test_enemy.cpp` | Enemy definitions and EnemyDatabase |
+| `test_damage_calc.cpp` | DamageCalculator formulas |
+| `test_battle_state.cpp` | BattleState state machine |
+| `test_battle_box.cpp` | BattleBox UI rendering |
+| `test_encounter.cpp` | EncounterManager random battles |

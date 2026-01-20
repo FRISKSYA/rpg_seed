@@ -1,5 +1,4 @@
 #include "entity/NPC.h"
-#include "entity/NPCData.h"
 #include "system/ResourceManager.h"
 #include "system/Renderer.h"
 #include <cmath>

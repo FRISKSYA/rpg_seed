@@ -23,7 +23,10 @@ SRCS = $(wildcard $(SRC_DIR)/*.cpp) \
        $(wildcard $(SRC_DIR)/field/*.cpp) \
        $(wildcard $(SRC_DIR)/system/*.cpp) \
        $(wildcard $(SRC_DIR)/entity/*.cpp) \
-       $(wildcard $(SRC_DIR)/ui/*.cpp)
+       $(wildcard $(SRC_DIR)/ui/*.cpp) \
+       $(wildcard $(SRC_DIR)/inventory/*.cpp) \
+       $(wildcard $(SRC_DIR)/save/*.cpp) \
+       $(wildcard $(SRC_DIR)/battle/*.cpp)
 
 # Object files
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
@@ -65,7 +68,7 @@ $(BUILD_DIR)/test/%.o: $(TEST_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(SDL2_CFLAGS) $(GTEST_CFLAGS) -I$(SRC_DIR) -c -o $@ $<
 
 dirs:
-	@mkdir -p $(BUILD_DIR)/game $(BUILD_DIR)/field $(BUILD_DIR)/system $(BUILD_DIR)/entity $(BUILD_DIR)/ui $(BUILD_DIR)/test
+	@mkdir -p $(BUILD_DIR)/game $(BUILD_DIR)/field $(BUILD_DIR)/system $(BUILD_DIR)/entity $(BUILD_DIR)/ui $(BUILD_DIR)/inventory $(BUILD_DIR)/save $(BUILD_DIR)/battle $(BUILD_DIR)/test
 
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET) $(TEST_TARGET)

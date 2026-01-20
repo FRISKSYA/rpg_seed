@@ -9,6 +9,9 @@ A retro-style RPG field system inspired by NES-era games (Dragon Quest 1 style),
 - **Map Transitions** - Seamless transitions between maps (overworld, dungeons)
 - **NPC System** - Interactive NPCs with multi-page dialogue
 - **Pause Menu** - Status display with HP/MP bars, player stats
+- **Inventory System** - Item management, item database, use items from menu
+- **Save/Load System** - Binary save files with checksum validation
+- **Battle System** - Dragon Quest style turn-based combat with random encounters
 - **Immutable Architecture** - Functional-style state management
 
 ## Screenshots
@@ -62,10 +65,13 @@ rpg_seed/
 │   ├── system/     # SDL2 wrappers (Renderer, Input, ResourceManager)
 │   ├── entity/     # Entities (NPC)
 │   ├── ui/         # UI components (Dialogue, Menu, StatusPanel)
+│   ├── inventory/  # Inventory system (Item, ItemDatabase, Inventory)
+│   ├── save/       # Save/Load system (SaveManager, SaveData)
+│   ├── battle/     # Battle system (Enemy, BattleState, DamageCalculator)
 │   └── util/       # Utilities (Vec2, Constants)
 ├── data/maps/      # Map CSV files
 ├── assets/         # Graphics (tiles, characters, fonts)
-├── tests/          # Unit tests (101 tests)
+├── tests/          # Unit tests (551 tests)
 └── docs/           # Documentation
 ```
 
@@ -121,9 +127,9 @@ See [docs/CONTRIB.md](docs/CONTRIB.md) for the full contributing guide.
 - [x] Phase 1: Field System (movement, collision, camera, transitions)
 - [x] Phase 2: NPC/Dialogue System
 - [x] Phase 3: Menu System (pause menu, status display)
-- [ ] Phase 4: Inventory System
-- [ ] Phase 5: Save/Load System
-- [ ] Phase 6: Battle System
+- [x] Phase 4: Inventory System
+- [x] Phase 5: Save/Load System
+- [x] Phase 6: Battle System
 
 ## License
 

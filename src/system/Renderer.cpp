@@ -1,5 +1,4 @@
 #include "system/Renderer.h"
-#include <SDL_image.h>
 #include <iostream>
 
 Renderer::Renderer() : window_(nullptr), renderer_(nullptr) {}

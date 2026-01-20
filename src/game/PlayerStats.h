@@ -30,6 +30,29 @@ struct PlayerStats {
         };
     }
 
+    // Restore player stats from save data (all values explicitly provided)
+    static PlayerStats restore(
+        std::string playerName,
+        int level,
+        int hp,
+        int maxHp,
+        int mp,
+        int maxMp,
+        int exp,
+        int gold
+    ) {
+        return PlayerStats{
+            std::move(playerName),
+            level,
+            hp,
+            maxHp,
+            mp,
+            maxMp,
+            exp,
+            gold
+        };
+    }
+
     // Immutable updates (return new PlayerStats)
     [[nodiscard]] PlayerStats withHP(int newHp) const {
         int clampedHp = std::clamp(newHp, 0, maxHp);

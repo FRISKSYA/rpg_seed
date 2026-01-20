@@ -1,4 +1,5 @@
 #include "game/Game.h"
+#include "battle/EnemyDatabase.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
@@ -8,6 +9,7 @@ Game::Game()
     , renderer_(nullptr)
     , resourceManager_(nullptr)
     , textRenderer_(nullptr)
+    , saveManager_("saves")
     , isRunning_(false) {}
 
 Game::~Game() {
@@ -160,6 +162,113 @@ void Game::handleInput() {
 void Game::update() {
     if (!gameState_) return;
 
+    // Handle battle input (highest priority when active)
+    if (gameState_->battle.isActive()) {
+        BattlePhase phase = gameState_->battle.getPhase();
+
+        if (phase == BattlePhase::CommandSelect) {
+            if (input_.isMenuUpPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleMoveUp());
+            } else if (input_.isMenuDownPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleMoveDown());
+            } else if (input_.isConfirmPressed()) {
+                BattleCommand cmd = gameState_->battle.getSelectedCommand();
+                if (cmd == BattleCommand::Attack) {
+                    // Calculate damage using DamageCalculator
+                    bool isCritical = false;
+                    int enemyDef = 0;
+                    if (gameState_->battle.hasEnemy()) {
+                        auto enemy = EnemyDatabase::instance().findByName(gameState_->battle.getEnemyName());
+                        if (enemy) {
+                            enemyDef = enemy->defense;
+                        }
+                    }
+                    int damage = DamageCalculator::calculatePlayerDamage(
+                        gameState_->playerStats.level * 5 + 10,  // Simple attack formula
+                        enemyDef,
+                        isCritical
+                    );
+                    gameState_ = std::make_unique<GameState>(gameState_->battleSelectAttack(damage, isCritical));
+                } else if (cmd == BattleCommand::Run) {
+                    int enemyAgi = 3;  // Default agility
+                    bool escaped = DamageCalculator::canEscape(
+                        gameState_->playerStats.level * 2 + 5,  // Simple agility formula
+                        enemyAgi
+                    );
+                    gameState_ = std::make_unique<GameState>(gameState_->battleSelectRun(escaped));
+                }
+                // Item command not yet implemented
+            }
+        } else if (phase == BattlePhase::PlayerAction) {
+            // After player action, enemy attacks
+            if (input_.isConfirmPressed()) {
+                int enemyAtk = 2;  // Default attack
+                if (gameState_->battle.hasEnemy()) {
+                    auto enemy = EnemyDatabase::instance().findByName(gameState_->battle.getEnemyName());
+                    if (enemy) {
+                        enemyAtk = enemy->attack;
+                    }
+                }
+                int damage = DamageCalculator::calculateEnemyDamage(
+                    enemyAtk,
+                    gameState_->playerStats.level * 2 + 5  // Simple defense formula
+                );
+                gameState_ = std::make_unique<GameState>(gameState_->battleEnemyAction(damage));
+            }
+        } else if (phase == BattlePhase::Encounter || phase == BattlePhase::EnemyAction ||
+                   phase == BattlePhase::Victory || phase == BattlePhase::Defeat ||
+                   phase == BattlePhase::Escaped) {
+            // Advance message phases
+            if (input_.isConfirmPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleAdvance());
+            }
+        }
+        return;  // Skip other input while in battle
+    }
+
+    // Handle save slot input (highest priority when active)
+    if (gameState_->saveSlot.isActive()) {
+        if (input_.isMenuUpPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->saveSlotMoveUp());
+        } else if (input_.isMenuDownPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->saveSlotMoveDown());
+        } else if (input_.isConfirmPressed()) {
+            // Perform save
+            int slotIndex = gameState_->saveSlot.getSelectedSlotIndex();
+            SaveData data = SaveData::create(
+                gameState_->playerStats,
+                gameState_->inventory,
+                gameState_->currentMapPath,
+                gameState_->player.getTilePos(),
+                gameState_->player.getFacing(),
+                0,  // playTimeSeconds (TODO: track actual play time)
+                std::time(nullptr)  // current timestamp
+            );
+            (void)saveManager_.save(slotIndex, data);  // Ignore return for now
+            // Update slot info and close
+            auto slots = saveManager_.getAllSlotInfo();
+            gameState_ = std::make_unique<GameState>(gameState_->updateSaveSlotInfo(slots));
+            gameState_ = std::make_unique<GameState>(gameState_->closeSaveSlot());
+        } else if (input_.isCancelPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->closeSaveSlot());
+        }
+        return;  // Skip other input while in save slot
+    }
+
+    // Handle item list input (highest priority when active)
+    if (gameState_->itemList.isActive()) {
+        if (input_.isMenuUpPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->itemListMoveUp());
+        } else if (input_.isMenuDownPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->itemListMoveDown());
+        } else if (input_.isConfirmPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->useSelectedItem());
+        } else if (input_.isCancelPressed()) {
+            gameState_ = std::make_unique<GameState>(gameState_->closeItemList());
+        }
+        return;  // Skip other input while in item list
+    }
+
     // Handle menu input (highest priority)
     if (gameState_->menu.isActive()) {
         if (input_.isMenuUpPressed()) {
@@ -198,11 +307,27 @@ void Game::update() {
 
     // Normal movement
     Direction dir = input_.getMovementDirection();
+    GameState oldState = *gameState_;
     gameState_ = std::make_unique<GameState>(gameState_->update(dir, currentMap_));
 
     // Check for map transitions when player stops moving
     if (!gameState_->player.isMoving()) {
         checkMapTransition();
+    }
+
+    // Check for random encounters when player finishes a step
+    bool justFinishedStep = oldState.player.isMoving() && !gameState_->player.isMoving();
+    if (justFinishedStep && !gameState_->battle.isActive()) {
+        // Get area level based on map (1 for world, 2 for dungeon)
+        int areaLevel = (gameState_->currentMapPath.find("dungeon") != std::string::npos) ? 2 : 1;
+        encounterManager_.onStep(areaLevel);
+        if (encounterManager_.shouldEncounter()) {
+            auto enemy = encounterManager_.getEncounteredEnemyDefinition();
+            if (enemy) {
+                gameState_ = std::make_unique<GameState>(gameState_->startBattle(*enemy));
+            }
+            encounterManager_.reset();
+        }
     }
 }
 
@@ -257,6 +382,21 @@ void Game::render() {
             if (gameState_->menu.showStatus()) {
                 statusPanel_.render(*renderer_, *textRenderer_, gameState_->playerStats);
             }
+
+            // Render item list (if showing)
+            if (gameState_->itemList.isActive()) {
+                itemListBox_.render(*renderer_, *textRenderer_, gameState_->itemList);
+            }
+
+            // Render save slot (if showing)
+            if (gameState_->saveSlot.isActive()) {
+                saveSlotBox_.render(*renderer_, *textRenderer_, gameState_->saveSlot);
+            }
+        }
+
+        // Render battle box (if active)
+        if (gameState_->battle.isActive() && textRenderer_) {
+            battleBox_.render(*renderer_, *textRenderer_, gameState_->battle);
         }
     }
 

@@ -26,7 +26,9 @@ public:
             {MenuItem::Status, MenuItem::Items, MenuItem::Save, MenuItem::Return},
             0,      // cursor at first item
             true,   // active
-            false   // showStatus
+            false,  // showStatus
+            false,  // showItemList
+            false   // showSaveSlot
         };
     }
 
@@ -34,13 +36,13 @@ public:
     [[nodiscard]] MenuState moveUp() const {
         if (!isActive_) return *this;
         int newIndex = (cursorIndex_ - 1 + static_cast<int>(items_.size())) % static_cast<int>(items_.size());
-        return MenuState{items_, newIndex, true, showStatus_};
+        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_};
     }
 
     [[nodiscard]] MenuState moveDown() const {
         if (!isActive_) return *this;
         int newIndex = (cursorIndex_ + 1) % static_cast<int>(items_.size());
-        return MenuState{items_, newIndex, true, showStatus_};
+        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_};
     }
 
     // Select current item (returns new state based on selection)
@@ -52,18 +54,33 @@ public:
         switch (selected) {
             case MenuItem::Status:
                 // Toggle status panel
-                return MenuState{items_, cursorIndex_, true, !showStatus_};
+                return MenuState{items_, cursorIndex_, true, !showStatus_, showItemList_, showSaveSlot_};
 
             case MenuItem::Items:
+                // Open item list
+                return MenuState{items_, cursorIndex_, true, showStatus_, true, showSaveSlot_};
+
             case MenuItem::Save:
-                // Disabled items - do nothing
-                return *this;
+                // Open save slot
+                return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, true};
 
             case MenuItem::Return:
                 // Close menu
                 return inactive();
         }
         return *this;
+    }
+
+    // Close item list (returns to menu)
+    [[nodiscard]] MenuState closeItemList() const {
+        if (!showItemList_) return *this;
+        return MenuState{items_, cursorIndex_, true, showStatus_, false, showSaveSlot_};
+    }
+
+    // Close save slot (returns to menu)
+    [[nodiscard]] MenuState closeSaveSlot() const {
+        if (!showSaveSlot_) return *this;
+        return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, false};
     }
 
     // Close menu (returns inactive state)
@@ -75,6 +92,8 @@ public:
     [[nodiscard]] bool isActive() const { return isActive_; }
     [[nodiscard]] int getCursorIndex() const { return cursorIndex_; }
     [[nodiscard]] bool showStatus() const { return showStatus_; }
+    [[nodiscard]] bool showItemList() const { return showItemList_; }
+    [[nodiscard]] bool showSaveSlot() const { return showSaveSlot_; }
 
     [[nodiscard]] MenuItem getCurrentItem() const {
         if (!isActive_ || items_.empty()) return MenuItem::Return;
@@ -96,11 +115,10 @@ public:
     [[nodiscard]] static bool isItemEnabled(MenuItem item) {
         switch (item) {
             case MenuItem::Status:
-            case MenuItem::Return:
-                return true;
             case MenuItem::Items:
             case MenuItem::Save:
-                return false;  // Disabled for now
+            case MenuItem::Return:
+                return true;
         }
         return false;
     }
@@ -118,16 +136,18 @@ public:
 
 private:
     // Private constructor for inactive state
-    MenuState() : items_{}, cursorIndex_(0), isActive_(false), showStatus_(false) {}
+    MenuState() : items_{}, cursorIndex_(0), isActive_(false), showStatus_(false), showItemList_(false), showSaveSlot_(false) {}
 
     // Private constructor for active state
-    MenuState(std::vector<MenuItem> items, int cursor, bool active, bool status)
-        : items_(std::move(items)), cursorIndex_(cursor), isActive_(active), showStatus_(status) {}
+    MenuState(std::vector<MenuItem> items, int cursor, bool active, bool status, bool itemList, bool saveSlot)
+        : items_(std::move(items)), cursorIndex_(cursor), isActive_(active), showStatus_(status), showItemList_(itemList), showSaveSlot_(saveSlot) {}
 
     std::vector<MenuItem> items_;
     int cursorIndex_;
     bool isActive_;
     bool showStatus_;
+    bool showItemList_;
+    bool showSaveSlot_;
 };
 
 #endif // MENU_STATE_H

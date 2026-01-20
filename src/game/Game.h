@@ -14,6 +14,11 @@
 #include "ui/DialogueBox.h"
 #include "ui/MenuBox.h"
 #include "ui/StatusPanel.h"
+#include "ui/ItemListBox.h"
+#include "ui/SaveSlotBox.h"
+#include "ui/BattleBox.h"
+#include "save/SaveManager.h"
+#include "battle/EncounterManager.h"
 
 class Game {
 public:
@@ -58,6 +63,15 @@ private:
     DialogueBox dialogueBox_;
     MenuBox menuBox_;
     StatusPanel statusPanel_;
+    ItemListBox itemListBox_;
+    SaveSlotBox saveSlotBox_;
+    BattleBox battleBox_;
+
+    // Save system
+    SaveManager saveManager_;
+
+    // Battle system
+    EncounterManager encounterManager_;
 
     // Game state (mutable, but updated immutably)
     std::unique_ptr<GameState> gameState_;
