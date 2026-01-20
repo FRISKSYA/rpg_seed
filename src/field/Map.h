@@ -7,6 +7,8 @@
 #include "field/Tile.h"
 #include "field/TileSet.h"
 #include "util/Vec2.h"
+#include "entity/NPC.h"
+#include "entity/NPCData.h"
 
 class Renderer;
 class ResourceManager;
@@ -54,6 +56,17 @@ public:
     [[nodiscard]] Vec2 getSpawnPosition() const { return Vec2{spawnX_, spawnY_}; }
     void setSpawnPosition(const Vec2& pos) { spawnX_ = pos.x; spawnY_ = pos.y; }
 
+    // NPC management
+    void addNPCDefinition(const NPCDefinition& def);
+    void addNPC(const Vec2& pos, Direction facing, const std::string& definitionId);
+    [[nodiscard]] const std::vector<NPC>& getNPCs() const { return npcs_; }
+    [[nodiscard]] bool hasNPCAt(const Vec2& pos) const;
+    [[nodiscard]] const NPC* getNPCAt(const Vec2& pos) const;
+    [[nodiscard]] NPC* getNPCAt(const Vec2& pos);
+
+    // Update NPC to face toward player
+    void updateNPCFacing(const Vec2& npcPos, const Vec2& playerPos);
+
 private:
     std::vector<Tile> tiles_;
     std::vector<MapTransition> transitions_;
@@ -63,8 +76,15 @@ private:
     int spawnX_;
     int spawnY_;
 
+    // NPC data
+    std::vector<NPCDefinition> npcDefinitions_;
+    std::vector<NPC> npcs_;
+
     // Default tile for out-of-bounds
     static const Tile defaultTile_;
+
+    // Find NPC definition index by ID (-1 if not found)
+    [[nodiscard]] int findDefinitionIndex(const std::string& id) const;
 };
 
 #endif // MAP_H

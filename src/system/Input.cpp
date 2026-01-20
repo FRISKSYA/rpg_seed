@@ -18,9 +18,7 @@ void Input::update() {
                 quitRequested_ = true;
                 break;
             case SDL_KEYDOWN:
-                if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-                    quitRequested_ = true;
-                }
+                // ESC no longer quits - handled by game for menu
                 break;
         }
     }
@@ -54,10 +52,6 @@ bool Input::isKeyJustPressed(SDL_Scancode key) const {
     return currentKeyState_[key] && !previousKeyState_[key];
 }
 
-bool Input::isKeyJustReleased(SDL_Scancode key) const {
-    return !currentKeyState_[key] && previousKeyState_[key];
-}
-
 bool Input::isConfirmPressed() const {
     return isKeyJustPressed(SDL_SCANCODE_Z) || isKeyJustPressed(SDL_SCANCODE_RETURN);
 }
@@ -67,5 +61,15 @@ bool Input::isCancelPressed() const {
 }
 
 bool Input::isMenuPressed() const {
-    return isKeyJustPressed(SDL_SCANCODE_SPACE) || isKeyJustPressed(SDL_SCANCODE_M);
+    return isKeyJustPressed(SDL_SCANCODE_ESCAPE) ||
+           isKeyJustPressed(SDL_SCANCODE_SPACE) ||
+           isKeyJustPressed(SDL_SCANCODE_M);
+}
+
+bool Input::isMenuUpPressed() const {
+    return isKeyJustPressed(SDL_SCANCODE_UP) || isKeyJustPressed(SDL_SCANCODE_W);
+}
+
+bool Input::isMenuDownPressed() const {
+    return isKeyJustPressed(SDL_SCANCODE_DOWN) || isKeyJustPressed(SDL_SCANCODE_S);
 }

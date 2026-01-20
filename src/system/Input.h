@@ -20,12 +20,15 @@ public:
     // Key state queries
     [[nodiscard]] bool isKeyPressed(SDL_Scancode key) const;
     [[nodiscard]] bool isKeyJustPressed(SDL_Scancode key) const;
-    [[nodiscard]] bool isKeyJustReleased(SDL_Scancode key) const;
 
     // Action queries
     [[nodiscard]] bool isConfirmPressed() const;
     [[nodiscard]] bool isCancelPressed() const;
     [[nodiscard]] bool isMenuPressed() const;
+
+    // Menu navigation (just-pressed for single-step navigation)
+    [[nodiscard]] bool isMenuUpPressed() const;
+    [[nodiscard]] bool isMenuDownPressed() const;
 
 private:
     const Uint8* currentKeyState_;

@@ -30,6 +30,35 @@ namespace Constants {
     constexpr int MIN_TILE_ID = 0;
     constexpr int MAX_TILE_ID = 9;
 
+    // Font settings (8x8 pixel bitmap font)
+    constexpr int FONT_CHAR_WIDTH = 8;
+    constexpr int FONT_CHAR_HEIGHT = 8;
+    constexpr int FONT_CHARS_PER_ROW = 16;
+    constexpr int FONT_FIRST_CHAR = 32;  // ASCII space
+
+    // Dialogue box settings
+    constexpr int DIALOGUE_BOX_X = 8;
+    constexpr int DIALOGUE_BOX_Y = INTERNAL_HEIGHT - 64;
+    constexpr int DIALOGUE_BOX_WIDTH = INTERNAL_WIDTH - 16;
+    constexpr int DIALOGUE_BOX_HEIGHT = 56;
+    constexpr int DIALOGUE_PADDING = 8;
+    constexpr int DIALOGUE_LINE_HEIGHT = 10;
+
+    // Menu box settings
+    constexpr int MENU_BOX_X = 8;
+    constexpr int MENU_BOX_Y = 8;
+    constexpr int MENU_BOX_WIDTH = 80;
+    constexpr int MENU_BOX_HEIGHT = 72;
+    constexpr int MENU_ITEM_HEIGHT = 12;
+    constexpr int MENU_CURSOR_OFFSET = 4;
+
+    // Status panel settings
+    constexpr int STATUS_PANEL_X = 96;
+    constexpr int STATUS_PANEL_Y = 8;
+    constexpr int STATUS_PANEL_WIDTH = 216;
+    constexpr int STATUS_PANEL_HEIGHT = 100;
+    constexpr int STATUS_LINE_HEIGHT = 12;
+
     // Window title
     constexpr const char* WINDOW_TITLE = "RPG Seed";
 }

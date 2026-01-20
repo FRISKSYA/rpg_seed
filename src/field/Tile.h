@@ -1,8 +1,6 @@
 #ifndef TILE_H
 #define TILE_H
 
-#include <string>
-
 // Tile types for the map
 enum class TileType : int {
     Grass = 0,
@@ -28,7 +26,6 @@ struct Tile {
         : type(t), walkable(w), textureX(tx), textureY(ty) {}
 
     [[nodiscard]] constexpr bool isWalkable() const { return walkable; }
-    [[nodiscard]] constexpr TileType getType() const { return type; }
 
     // Factory functions for common tiles
     [[nodiscard]] static constexpr Tile grass() { return Tile{TileType::Grass, true, 0, 0}; }

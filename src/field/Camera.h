@@ -33,21 +33,8 @@ public:
         return centerOn(pixelX, pixelY);
     }
 
-    // Update map bounds (for map transitions)
-    [[nodiscard]] Camera withMapBounds(int mapWidth, int mapHeight) const {
-        return Camera{x_, y_, mapWidth, mapHeight};
-    }
-
     [[nodiscard]] int getX() const { return x_; }
     [[nodiscard]] int getY() const { return y_; }
-
-    // Convert world coordinates to screen coordinates
-    [[nodiscard]] int worldToScreenX(int worldX) const { return worldX - x_; }
-    [[nodiscard]] int worldToScreenY(int worldY) const { return worldY - y_; }
-
-    // Convert screen coordinates to world coordinates
-    [[nodiscard]] int screenToWorldX(int screenX) const { return screenX + x_; }
-    [[nodiscard]] int screenToWorldY(int screenY) const { return screenY + y_; }
 
 private:
     const int x_;

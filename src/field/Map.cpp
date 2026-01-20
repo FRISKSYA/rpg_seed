@@ -125,7 +125,10 @@ const Tile& Map::getTile(int x, int y) const {
 }
 
 bool Map::isWalkable(int x, int y) const {
-    return isInBounds(x, y) && getTile(x, y).isWalkable();
+    if (!isInBounds(x, y)) return false;
+    if (!getTile(x, y).isWalkable()) return false;
+    if (hasNPCAt(Vec2{x, y})) return false;
+    return true;
 }
 
 bool Map::isInBounds(int x, int y) const {
@@ -143,4 +146,62 @@ std::optional<MapTransition> Map::getTransitionAt(const Vec2& pos) const {
         }
     }
     return std::nullopt;
+}
+
+// NPC management implementation
+void Map::addNPCDefinition(const NPCDefinition& def) {
+    npcDefinitions_.push_back(def);
+}
+
+void Map::addNPC(const Vec2& pos, Direction facing, const std::string& definitionId) {
+    int index = findDefinitionIndex(definitionId);
+    if (index >= 0) {
+        const NPCDefinition& def = npcDefinitions_[index];
+        npcs_.push_back(NPC{pos, facing, index, def.spriteRow, def.dialogue});
+    }
+}
+
+bool Map::hasNPCAt(const Vec2& pos) const {
+    for (const auto& npc : npcs_) {
+        if (npc.getPosition() == pos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const NPC* Map::getNPCAt(const Vec2& pos) const {
+    for (const auto& npc : npcs_) {
+        if (npc.getPosition() == pos) {
+            return &npc;
+        }
+    }
+    return nullptr;
+}
+
+NPC* Map::getNPCAt(const Vec2& pos) {
+    for (auto& npc : npcs_) {
+        if (npc.getPosition() == pos) {
+            return &npc;
+        }
+    }
+    return nullptr;
+}
+
+void Map::updateNPCFacing(const Vec2& npcPos, const Vec2& playerPos) {
+    for (size_t i = 0; i < npcs_.size(); ++i) {
+        if (npcs_[i].getPosition() == npcPos) {
+            npcs_[i] = npcs_[i].faceToward(playerPos);
+            break;
+        }
+    }
+}
+
+int Map::findDefinitionIndex(const std::string& id) const {
+    for (size_t i = 0; i < npcDefinitions_.size(); ++i) {
+        if (npcDefinitions_[i].id == id) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;  // Not found
 }

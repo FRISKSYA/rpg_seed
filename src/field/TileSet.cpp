@@ -5,11 +5,7 @@ TileSet::TileSet(int tileSize) : texture_(nullptr), tileSize_(tileSize) {}
 
 bool TileSet::load(ResourceManager& resourceManager, const std::string& path) {
     texture_ = resourceManager.loadTexture(path);
-    if (texture_) {
-        path_ = path;
-        return true;
-    }
-    return false;
+    return texture_ != nullptr;
 }
 
 SDL_Rect TileSet::getSourceRect(int tileX, int tileY) const {

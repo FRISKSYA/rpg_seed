@@ -64,17 +64,11 @@ void Renderer::fillRect(int x, int y, int w, int h) {
     SDL_RenderFillRect(renderer_, &rect);
 }
 
+void Renderer::drawRect(int x, int y, int w, int h) {
+    SDL_Rect rect = {x, y, w, h};
+    SDL_RenderDrawRect(renderer_, &rect);
+}
+
 void Renderer::drawTexture(SDL_Texture* texture, const SDL_Rect* src, const SDL_Rect* dst) {
     SDL_RenderCopy(renderer_, texture, src, dst);
-}
-
-void Renderer::drawTextureEx(SDL_Texture* texture, const SDL_Rect* src, const SDL_Rect* dst,
-                              double angle, SDL_RendererFlip flip) {
-    SDL_RenderCopyEx(renderer_, texture, src, dst, angle, nullptr, flip);
-}
-
-void Renderer::renderTile(SDL_Texture* texture, int srcX, int srcY, int destX, int destY, int tileSize) {
-    SDL_Rect src = {srcX, srcY, tileSize, tileSize};
-    SDL_Rect dst = {destX, destY, tileSize, tileSize};
-    SDL_RenderCopy(renderer_, texture, &src, &dst);
 }

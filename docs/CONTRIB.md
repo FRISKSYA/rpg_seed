@@ -97,9 +97,11 @@ void add(int dx, int dy) {
 | Directory | Purpose |
 |-----------|---------|
 | `src/` | Source code |
-| `src/game/` | Game logic (Player, GameState, Game) |
-| `src/field/` | Map and tile system |
-| `src/system/` | SDL2 wrappers (Renderer, Input) |
+| `src/game/` | Game logic (Game, GameState, Player, PlayerStats) |
+| `src/field/` | Map and tile system (Map, Tile, TileSet, Camera) |
+| `src/system/` | SDL2 wrappers (Renderer, Input, ResourceManager) |
+| `src/entity/` | Game entities (NPC, NPCData) |
+| `src/ui/` | User interface (DialogueBox, MenuBox, StatusPanel, TextRenderer) |
 | `src/util/` | Utilities (Vec2, Constants) |
 | `data/maps/` | Map CSV files |
 | `assets/` | Graphics and assets |
@@ -121,6 +123,20 @@ void add(int dx, int dy) {
 1. Create CSV file in `data/maps/`
 2. Use tile IDs: 0=Grass, 1=Water, 2=Wall, 3=Floor, 4=Tree, 9=Stairs
 3. Configure transitions in `Game::loadMap()` if needed
+
+### Adding a New NPC
+
+1. Add `NPCDefinition` in `Game::setupNPCs()` with id, spriteRow, dialogue
+2. Call `currentMap_.addNPC(position, direction, definitionId)`
+3. Add sprite row to `assets/characters/npcs.png`
+
+### Adding a New Menu Item
+
+1. Add enum value to `MenuItem` in `src/ui/MenuState.h`
+2. Update `MenuState::open()` to include item
+3. Update `MenuState::select()` with item behavior
+4. Update `MenuState::isItemEnabled()` and `getItemName()`
+5. Write unit tests in `tests/test_menu.cpp`
 
 ### Adding New Tests
 
@@ -150,8 +166,12 @@ lldb ./rpg_seed
 
 Target: 80%+ coverage on core logic
 
-Current test suites:
-- `test_vec2.cpp` - Vector math operations
-- `test_tile.cpp` - Tile types and properties
-- `test_map.cpp` - Map loading and queries
-- `test_collision.cpp` - Movement and collision
+Current test suites (101 tests total):
+- `test_vec2.cpp` - Vec2 math operations (12 tests)
+- `test_tile.cpp` - Tile types and properties (12 tests)
+- `test_map.cpp` - Map loading and queries (9 tests)
+- `test_collision.cpp` - Movement and collision (11 tests)
+- `test_dialogue.cpp` - DialogueState state machine (11 tests)
+- `test_npc.cpp` - NPC entity and Map NPC integration (16 tests)
+- `test_menu.cpp` - MenuState state machine (17 tests)
+- `test_player_stats.cpp` - PlayerStats immutability (13 tests)

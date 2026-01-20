@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RPG Seed is a retro-style RPG field system inspired by NES-era games (Dragon Quest 1 style). It implements tile-based movement, collision detection, camera following, and map transitions.
+RPG Seed is a retro-style RPG field system inspired by NES-era games (Dragon Quest 1 style). It implements tile-based movement, collision detection, camera following, map transitions, NPC dialogue, and a pause menu system.
 
 ## Technology Stack
 
@@ -20,7 +20,7 @@ RPG Seed is a retro-style RPG field system inspired by NES-era games (Dragon Que
 |---------|-------------|
 | `make` | Build the release executable |
 | `make debug` | Build with debug symbols (-g -DDEBUG) |
-| `make test` | Build and run all unit tests |
+| `make test` | Build and run all unit tests (101 tests) |
 | `make clean` | Remove all build artifacts |
 
 ## Project Structure
@@ -33,9 +33,10 @@ rpg_seed/
 │   ├── game/
 │   │   ├── Game.cpp/h        # Main game loop
 │   │   ├── GameState.h       # Immutable game state
-│   │   └── Player.cpp/h      # Player entity and renderer
+│   │   ├── Player.cpp/h      # Player entity and renderer
+│   │   └── PlayerStats.h     # Immutable player statistics
 │   ├── field/
-│   │   ├── Map.cpp/h         # Tile map with CSV loading
+│   │   ├── Map.cpp/h         # Tile map with CSV loading and NPC management
 │   │   ├── Tile.cpp/h        # Tile types and properties
 │   │   ├── TileSet.cpp/h     # Tileset texture management
 │   │   └── Camera.h          # Camera with boundary clamping
@@ -43,6 +44,16 @@ rpg_seed/
 │   │   ├── Input.cpp/h       # Keyboard input handling
 │   │   ├── Renderer.cpp/h    # SDL2 rendering wrapper
 │   │   └── ResourceManager.cpp/h  # Texture caching
+│   ├── entity/
+│   │   ├── NPC.cpp/h         # NPC entity and renderer
+│   │   └── NPCData.h         # NPC definition data
+│   ├── ui/
+│   │   ├── DialogueBox.cpp/h     # Dialogue box renderer
+│   │   ├── DialogueState.h       # Immutable dialogue state machine
+│   │   ├── MenuBox.cpp/h         # Pause menu renderer
+│   │   ├── MenuState.h           # Immutable menu state machine
+│   │   ├── StatusPanel.cpp/h     # Player status display
+│   │   └── TextRenderer.cpp/h    # Bitmap font renderer
 │   └── util/
 │       ├── Vec2.h            # Immutable 2D vector
 │       └── Constants.h       # Game constants
@@ -52,23 +63,27 @@ rpg_seed/
 │       └── dungeon_01.csv    # Dungeon map
 ├── assets/
 │   ├── tiles/tileset.png     # Tile graphics
-│   └── characters/player.png # Player sprite sheet
-└── tests/
-    ├── test_vec2.cpp         # Vec2 unit tests
-    ├── test_tile.cpp         # Tile unit tests
-    ├── test_map.cpp          # Map unit tests
-    └── test_collision.cpp    # Collision detection tests
+│   ├── characters/
+│   │   ├── player.png        # Player sprite sheet
+│   │   └── npcs.png          # NPC sprite sheet
+│   └── fonts/font.png        # Bitmap font
+├── tests/                    # Unit tests (101 total)
+└── docs/
+    ├── CONTRIB.md            # Contributing guide
+    └── RUNBOOK.md            # Operations runbook
 ```
 
 ## Architecture Principles
 
 ### Immutability Pattern
-Core data structures (Vec2, Tile, Player, GameState, Camera) are immutable. State updates return new objects rather than mutating in place:
+Core data structures (Vec2, Tile, Player, GameState, Camera, DialogueState, MenuState, PlayerStats) are immutable. State updates return new objects rather than mutating in place:
 
 ```cpp
 // Update returns new state
 GameState newState = gameState->update(direction, map);
 Player movedPlayer = player.tryMove(Direction::Right, map);
+MenuState nextMenu = menuState.moveDown();
+PlayerStats healed = stats.withHP(stats.maxHp);
 ```
 
 ### RAII Resource Management
@@ -78,8 +93,12 @@ SDL2 resources are managed with RAII wrappers:
 
 ## Controls
 
-- **Arrow Keys / WASD**: Move player
-- **ESC**: Quit game
+| Key | Action |
+|-----|--------|
+| Arrow Keys / WASD | Move player |
+| Z / Enter | Confirm / Interact with NPC |
+| X / Backspace | Cancel / Close menu |
+| ESC / Space / M | Open/Close pause menu |
 
 ## Screen Specifications
 
@@ -87,6 +106,16 @@ SDL2 resources are managed with RAII wrappers:
 - Display scale: 2x (640x480 window)
 - Tile size: 32x32 pixels
 - Target FPS: 60
+
+## Feature Status
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 1 | Field System (movement, collision, camera, map transitions) | Complete |
+| 2 | NPC/Dialogue System (NPCs, dialogue state machine, interaction) | Complete |
+| 3 | Menu System (pause menu, status display, player stats) | Complete |
+| 4 | Inventory System | Planned |
+| 5 | Save/Load System | Planned |
 
 ## License
 

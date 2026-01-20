@@ -18,9 +18,6 @@ public:
     // Get the texture for rendering
     [[nodiscard]] SDL_Texture* getTexture() const { return texture_; }
 
-    // Get tile size
-    [[nodiscard]] int getTileSize() const { return tileSize_; }
-
     // Get source rect for a tile at grid position
     [[nodiscard]] SDL_Rect getSourceRect(int tileX, int tileY) const;
 
@@ -28,7 +25,6 @@ private:
     // Non-owning pointer - texture lifetime managed by ResourceManager
     SDL_Texture* texture_;
     int tileSize_;
-    std::string path_;
 };
 
 #endif // TILESET_H

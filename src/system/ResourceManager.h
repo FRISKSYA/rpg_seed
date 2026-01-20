@@ -18,11 +18,7 @@ public:
     // Texture management
     [[nodiscard]] SDL_Texture* loadTexture(const std::string& path);
     [[nodiscard]] SDL_Texture* getTexture(const std::string& path) const;
-    void unloadTexture(const std::string& path);
     void unloadAllTextures();
-
-    // Check if texture exists
-    [[nodiscard]] bool hasTexture(const std::string& path) const;
 
 private:
     // Non-owning pointer - renderer must outlive this ResourceManager

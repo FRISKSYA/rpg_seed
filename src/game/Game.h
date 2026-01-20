@@ -9,6 +9,11 @@
 #include "system/Renderer.h"
 #include "system/Input.h"
 #include "system/ResourceManager.h"
+#include "entity/NPC.h"
+#include "ui/TextRenderer.h"
+#include "ui/DialogueBox.h"
+#include "ui/MenuBox.h"
+#include "ui/StatusPanel.h"
 
 class Game {
 public:
@@ -46,6 +51,13 @@ private:
     // Game objects
     Map currentMap_;
     PlayerRenderer playerRenderer_;
+    NPCRenderer npcRenderer_;
+
+    // UI components
+    std::unique_ptr<TextRenderer> textRenderer_;
+    DialogueBox dialogueBox_;
+    MenuBox menuBox_;
+    StatusPanel statusPanel_;
 
     // Game state (mutable, but updated immutably)
     std::unique_ptr<GameState> gameState_;
@@ -53,8 +65,8 @@ private:
     // Running flag
     bool isRunning_;
 
-    // Fixed timestep accumulator
-    Uint32 lastFrameTime_;
+    // Setup NPCs for the current map
+    void setupNPCs(const std::string& mapPath);
 };
 
 #endif // GAME_H

@@ -50,14 +50,6 @@ SDL_Texture* ResourceManager::getTexture(const std::string& path) const {
     return nullptr;
 }
 
-void ResourceManager::unloadTexture(const std::string& path) {
-    textures_.erase(path);
-}
-
 void ResourceManager::unloadAllTextures() {
     textures_.clear();
-}
-
-bool ResourceManager::hasTexture(const std::string& path) const {
-    return textures_.find(path) != textures_.end();
 }
