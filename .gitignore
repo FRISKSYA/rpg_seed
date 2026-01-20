@@ -1,5 +1,7 @@
 # Prerequisites
 *.d
+rpg_seed
+run_tests
 
 # Compiled Object files
 *.slo
