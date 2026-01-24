@@ -117,6 +117,7 @@ void add(int dx, int dy) {
 | `src/util/` | Utilities (Vec2, Constants) |
 | `data/maps/` | Map CSV files |
 | `assets/` | Graphics and assets |
+| `tools/` | Development utilities |
 | `tests/` | Unit tests |
 | `build/` | Build artifacts (gitignored) |
 
@@ -169,6 +170,36 @@ void add(int dx, int dy) {
 2. Include `<gtest/gtest.h>` and relevant headers
 3. Use `TEST()` for standalone tests, `TEST_F()` with fixtures
 4. Run `make test` to verify
+
+### Regenerating Bitmap Font
+
+Use the font generator tool to create a new bitmap font from any TTF font:
+
+```bash
+# Create virtual environment and install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+pip install Pillow
+
+# Generate font (uses Monaco by default)
+python tools/generate_font.py
+
+# Use custom font
+python tools/generate_font.py --font /path/to/font.ttf --size 8
+
+# Save to different file
+python tools/generate_font.py --font "Menlo" -o assets/fonts/custom.png
+
+# Clean up
+deactivate
+rm -rf .venv
+```
+
+Font specifications:
+- Character size: 8x8 pixels
+- Image size: 128x48 pixels (16 chars x 6 rows)
+- Character range: ASCII 32-127 (96 characters)
+- Format: PNG with transparent background, white text
 
 ## Debugging
 

@@ -165,6 +165,13 @@ ls -la assets/characters/npcs.png
 ls -la assets/fonts/font.png
 ```
 
+**Regenerate font if missing**:
+```bash
+python3 -m venv .venv && source .venv/bin/activate && pip install Pillow
+python tools/generate_font.py
+deactivate && rm -rf .venv
+```
+
 #### Crash on Startup
 **Diagnosis**: Run with debug build
 ```bash
@@ -219,6 +226,7 @@ top -pid $(pgrep rpg_seed)
 | Graphics | `./assets/` |
 | Fonts | `./assets/fonts/` |
 | Source code | `./src/` |
+| Tools | `./tools/` |
 | Tests | `./tests/` |
 | Save files | `./saves/` |
 
