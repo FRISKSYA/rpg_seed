@@ -41,3 +41,6 @@ run_tests
 
 # debug information files
 *.dwo
+
+# Save data
+saves/
