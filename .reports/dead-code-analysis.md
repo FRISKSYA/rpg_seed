@@ -1,84 +1,143 @@
 # Dead Code Analysis Report
 
-Generated: 2026-01-25
+**Generated:** 2026-01-25 (Updated)
+**Project:** RPG Seed (C++ SDL2 Game)
+**Test Status:** 516 tests passing
+
+---
 
 ## Summary
 
-| Category | Count | Action |
+| Severity | Count | Action |
 |----------|-------|--------|
-| SAFE to delete | 1 | Ready for removal |
-| CAUTION | 1 | Keep for now |
-| DANGER | 0 | Do not touch |
+| SAFE | 1 | Can remove safely |
+| CAUTION | 8 | Used in tests only - keep for planned features |
+| DANGER | 0 | None identified |
 
 ---
 
-## SAFE: Dead Code - Ready for Removal
+## SAFE: Dead Code Removed
 
-### 1. `src/battle/DamageCalculator.h`
+### 1. `EnemyDatabase::findByName()` - REMOVED
 
-**Status:** DEAD CODE - No longer used in production
+**File:** `src/battle/EnemyDatabase.h` (was lines 29-36)
+**Status:** Removed on 2026-01-25
 
-**Evidence:**
-- Not included in any production source files
-- Only referenced in `tests/test_damage_calc.cpp`
-- The new affinity-based battle system does not use HP damage calculations
-- Attack command was removed from BattleState
-
-**Impact:** Low - utility class with no side effects
-
-**Recommendation:** Delete both:
-- `src/battle/DamageCalculator.h`
-- `tests/test_damage_calc.cpp`
+Method was never called anywhere in codebase. `findById()` is the standard lookup method.
 
 ---
 
-## CAUTION: Unused but Potentially Useful
+## CAUTION: Test-Only Usage (Keep for Planned Features)
 
-### 1. `src/language/WordDatabase.h` and `src/language/Word.h`
+### 1. `language/Word.h` and `language/WordDatabase.h`
+
+**Files:**
+- `src/language/Word.h`
+- `src/language/WordDatabase.h`
 
 **Status:** Currently unused in production code
-
 **Evidence:**
 - Not included in any `.cpp` files
 - Created as part of Esperanto learning infrastructure
 - Only `TopicDatabase` (conversations) is actively used
 
-**Impact:** Low - these are part of planned vocabulary learning feature
-
-**Recommendation:** KEEP - Part of Phase 5 content infrastructure. May be used for:
-- Vocabulary study mode
-- Word glossary feature
-- Progress tracking per word
+**Recommendation:** KEEP - Part of planned vocabulary learning feature
 
 ---
 
-## Analysis Details
+### 2. `PlayerStats::withMP()` - Test Only
 
-### Files Checked
-- All `src/**/*.h` and `src/**/*.cpp` files
-- All `tests/*.cpp` files
+**File:** `src/game/PlayerStats.h`
 
-### Methods Verified as Removed
-The following old battle methods were successfully removed:
+**Usages:** tests/test_player_stats.cpp only (7 usages)
+
+**Recommendation:** Keep - MP (mana) system planned feature
+
+---
+
+### 3. `Inventory::removeItem()` - Test Only
+
+**File:** `src/inventory/Inventory.h:57`
+
+**Usages:** tests/test_inventory.cpp only (8 usages)
+
+**Recommendation:** Keep - useful API for future features
+
+---
+
+### 4. Tile Factory Methods (Partial Usage)
+
+**File:** `src/field/Tile.h`
+
+| Method | Production | Tests |
+|--------|------------|-------|
+| `Tile::grass()` | Yes | Yes |
+| `Tile::wall()` | Yes | Yes |
+| `Tile::floor()` | No | Yes |
+| `Tile::water()` | No | Yes |
+| `Tile::tree()` | No | Yes |
+| `Tile::mountain()` | No | Yes |
+| `Tile::sand()` | No | Yes |
+| `Tile::door()` | No | Yes |
+| `Tile::bridge()` | No | Yes |
+| `Tile::stairs()` | No | Yes |
+
+**Recommendation:** Keep - will be used when more maps are added
+
+---
+
+### 5. `Item::equipment()` and `Item::keyItem()` Factories
+
+**File:** `src/inventory/Item.h`
+
+**Production usages:** ItemDatabase initialization only
+**Recommendation:** Keep - planned equipment/quest system
+
+---
+
+### 6. `Item::isEquippable()` - Test Only
+
+**File:** `src/inventory/Item.h:37`
+
+**Recommendation:** Keep - needed for equipment system
+
+---
+
+### 7. `MenuState::close()` and `ItemListState::close()`
+
+**Status:** Never called - code uses `inactive()` directly
+
+**Recommendation:** Consider removing - redundant with `inactive()`
+
+---
+
+## Previously Removed (Verified Clean)
+
+The following dead code was removed in previous cleanup:
+- `src/battle/DamageCalculator.h` - Removed
+- `tests/test_damage_calc.cpp` - Removed
 - `BattleState::selectAttack()` - Removed
-- `BattleState::executeEnemyAction()` - Removed
-- `BattleState::getEnemyHp()` - Removed
 - `BattlePhase::EnemyAction` - Removed
 - `BattlePhase::Defeat` - Removed
 
-### New Code Properly Integrated
-- `ConversationTopic.h` - Used in BattleState.h
-- `TopicDatabase.h` - Used in Game.cpp
-- `Personality` enum - Used in BattleState.h, Game.cpp
-- Affinity system - Fully integrated
+---
+
+## Build Verification
+
+```
+$ make clean && make 2>&1 | grep -E "warning:"
+(no warnings)
+```
+
+Codebase compiles cleanly with `-Wall -Wextra -Wunused`.
 
 ---
 
-## Proposed Deletions
+## Cleanup Summary
 
-\`\`\`
-DELETE: src/battle/DamageCalculator.h
-DELETE: tests/test_damage_calc.cpp
-\`\`\`
+| Item | Action | Tests Before | Tests After |
+|------|--------|--------------|-------------|
+| `EnemyDatabase::findByName()` | Removed | 517 pass | 517 pass |
+| Menu tests (5 failures) | Fixed for PhraseBook | 516 pass | 517 pass |
 
-**Test verification required before deletion.**
+All safe deletions completed successfully.

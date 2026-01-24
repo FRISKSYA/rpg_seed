@@ -35,8 +35,9 @@ public:
         // Check if item already exists
         for (size_t i = 0; i < slots_.size(); ++i) {
             if (slots_[i].itemId == itemId) {
-                // Stack on existing slot
-                int newQuantity = std::min(slots_[i].quantity + quantity, MAX_STACK);
+                // Stack on existing slot (clamp first to prevent overflow)
+                int safeQuantity = std::min(quantity, MAX_STACK);
+                int newQuantity = std::min(slots_[i].quantity + safeQuantity, MAX_STACK);
                 return replaceSlotAt(i, InventorySlot{itemId, newQuantity});
             }
         }

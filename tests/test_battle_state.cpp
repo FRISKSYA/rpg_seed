@@ -514,3 +514,61 @@ TEST_F(BattleStateEndTypeTest, EscapedHasEscapedEndType) {
 
     EXPECT_EQ(state.getBattleEndType(), BattleEndType::Escaped);
 }
+
+// ============================================================================
+// Affinity Boundary Tests
+// ============================================================================
+
+TEST(BattleStateAffinityBoundaryTest, AffinityCannotGoBelowZero) {
+    EnemyDefinition slimeDef = EnemyDefinition::create(
+        "slime", "Slime", 3, 2, 1, 3, 1, 2, 0
+    );
+    PlayerStats playerStats = PlayerStats::create("Hero");
+
+    // Topic with large negative affinity change
+    ConversationTopic negativeTopic = ConversationTopic::create(
+        "test_negative",
+        "Test",
+        "Test",
+        {
+            ConversationChoice::create("Wrong", "Wrong", false, -100)
+        },
+        1
+    );
+
+    BattleState state = BattleState::inactive()
+        .encounter(slimeDef, playerStats, Personality::Neutral)
+        .toCommandSelect()
+        .selectTalk(negativeTopic)
+        .chooseOption();  // -100 affinity
+
+    // Affinity should be clamped to 0, not negative
+    EXPECT_GE(state.getAffinity(), 0);
+}
+
+TEST(BattleStateAffinityBoundaryTest, LargeAffinityBoostTriggersFriendship) {
+    EnemyDefinition slimeDef = EnemyDefinition::create(
+        "slime", "Slime", 3, 2, 1, 3, 1, 2, 0
+    );
+    PlayerStats playerStats = PlayerStats::create("Hero");
+
+    // Topic with large positive affinity change
+    ConversationTopic positiveTopic = ConversationTopic::create(
+        "test_positive",
+        "Test",
+        "Test",
+        {
+            ConversationChoice::create("Right", "Right", true, 1000)
+        },
+        1
+    );
+
+    BattleState state = BattleState::inactive()
+        .encounter(slimeDef, playerStats, Personality::Neutral, 100)  // threshold 100
+        .toCommandSelect()
+        .selectTalk(positiveTopic)
+        .chooseOption();  // +1000 affinity
+
+    // Should trigger friendship (affinity >= threshold)
+    EXPECT_EQ(state.getPhase(), BattlePhase::Friendship);
+}

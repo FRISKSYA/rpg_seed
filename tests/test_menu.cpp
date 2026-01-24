@@ -15,7 +15,7 @@ TEST_F(MenuStateTest, OpenCreatesActiveMenu) {
 
     EXPECT_TRUE(state.isActive());
     EXPECT_EQ(state.getCursorIndex(), 0);
-    EXPECT_EQ(state.getItemCount(), 4);  // Status, Items, Save, Return
+    EXPECT_EQ(state.getItemCount(), 5);  // Status, Items, PhraseBook, Save, Return
 }
 
 TEST_F(MenuStateTest, MoveDownIncreasesCursor) {
@@ -29,10 +29,11 @@ TEST_F(MenuStateTest, MoveDownIncreasesCursor) {
 TEST_F(MenuStateTest, MoveDownWrapsAround) {
     MenuState state = MenuState::open();
 
-    // Move past last item
-    state = state.moveDown();  // 1
-    state = state.moveDown();  // 2
-    state = state.moveDown();  // 3 (last)
+    // Move past last item (5 items: Status, Items, PhraseBook, Save, Return)
+    state = state.moveDown();  // 1 (Items)
+    state = state.moveDown();  // 2 (PhraseBook)
+    state = state.moveDown();  // 3 (Save)
+    state = state.moveDown();  // 4 (Return - last)
     MenuState wrapped = state.moveDown();  // Should wrap to 0
 
     EXPECT_EQ(wrapped.getCursorIndex(), 0);
@@ -52,16 +53,17 @@ TEST_F(MenuStateTest, MoveUpWrapsAround) {
 
     MenuState wrapped = state.moveUp();  // Should wrap to last
 
-    EXPECT_EQ(wrapped.getCursorIndex(), 3);  // Last item
+    EXPECT_EQ(wrapped.getCursorIndex(), 4);  // Last item (Return at index 4)
 }
 
 TEST_F(MenuStateTest, SelectReturnClosesMenu) {
     MenuState state = MenuState::open();
 
-    // Move to Return (index 3)
-    state = state.moveDown();  // 1
-    state = state.moveDown();  // 2
-    state = state.moveDown();  // 3 (Return)
+    // Move to Return (index 4)
+    state = state.moveDown();  // 1 (Items)
+    state = state.moveDown();  // 2 (PhraseBook)
+    state = state.moveDown();  // 3 (Save)
+    state = state.moveDown();  // 4 (Return)
 
     MenuState closed = state.select();
 
@@ -84,14 +86,37 @@ TEST_F(MenuStateTest, SelectStatusTogglesPanel) {
     EXPECT_FALSE(toggledOff.showStatus());
 }
 
-TEST_F(MenuStateTest, SelectDisabledItemDoesNothing) {
+TEST_F(MenuStateTest, SelectItemsShowsItemList) {
     MenuState state = MenuState::open();
-    state = state.moveDown();  // Move to Items (disabled)
+    state = state.moveDown();  // Move to Items (index 1)
 
-    MenuState same = state.select();
+    MenuState selected = state.select();
 
-    EXPECT_TRUE(same.isActive());  // Still active
-    EXPECT_EQ(same.getCursorIndex(), 1);  // Still at Items
+    EXPECT_TRUE(selected.isActive());
+    EXPECT_TRUE(selected.showItemList());
+}
+
+TEST_F(MenuStateTest, SelectPhraseBookShowsPhraseBook) {
+    MenuState state = MenuState::open();
+    state = state.moveDown();  // Items
+    state = state.moveDown();  // PhraseBook (index 2)
+
+    MenuState selected = state.select();
+
+    EXPECT_TRUE(selected.isActive());
+    EXPECT_TRUE(selected.showPhraseBook());
+}
+
+TEST_F(MenuStateTest, SelectSaveShowsSaveSlot) {
+    MenuState state = MenuState::open();
+    state = state.moveDown();  // Items
+    state = state.moveDown();  // PhraseBook
+    state = state.moveDown();  // Save (index 3)
+
+    MenuState selected = state.select();
+
+    EXPECT_TRUE(selected.isActive());
+    EXPECT_TRUE(selected.showSaveSlot());
 }
 
 TEST_F(MenuStateTest, CloseReturnsInactive) {
@@ -120,6 +145,10 @@ TEST_F(MenuStateTest, SaveEnabled) {
     EXPECT_TRUE(MenuState::isItemEnabled(MenuItem::Save));
 }
 
+TEST_F(MenuStateTest, PhraseBookEnabled) {
+    EXPECT_TRUE(MenuState::isItemEnabled(MenuItem::PhraseBook));
+}
+
 TEST_F(MenuStateTest, StatusEnabled) {
     EXPECT_TRUE(MenuState::isItemEnabled(MenuItem::Status));
 }
@@ -131,6 +160,7 @@ TEST_F(MenuStateTest, ReturnEnabled) {
 TEST_F(MenuStateTest, GetItemName) {
     EXPECT_STREQ(MenuState::getItemName(MenuItem::Status), "Status");
     EXPECT_STREQ(MenuState::getItemName(MenuItem::Items), "Items");
+    EXPECT_STREQ(MenuState::getItemName(MenuItem::PhraseBook), "Phrases");
     EXPECT_STREQ(MenuState::getItemName(MenuItem::Save), "Save");
     EXPECT_STREQ(MenuState::getItemName(MenuItem::Return), "Return");
 }
@@ -144,8 +174,107 @@ TEST_F(MenuStateTest, GetCurrentItem) {
     EXPECT_EQ(state.getCurrentItem(), MenuItem::Items);
 
     state = state.moveDown();
+    EXPECT_EQ(state.getCurrentItem(), MenuItem::PhraseBook);
+
+    state = state.moveDown();
     EXPECT_EQ(state.getCurrentItem(), MenuItem::Save);
 
     state = state.moveDown();
+    EXPECT_EQ(state.getCurrentItem(), MenuItem::Return);
+}
+
+// === Close Sub-panel Tests ===
+
+TEST_F(MenuStateTest, CloseItemListReturnsToMenu) {
+    MenuState state = MenuState::open()
+        .moveDown()  // Items
+        .select();   // Show item list
+
+    EXPECT_TRUE(state.showItemList());
+
+    MenuState closed = state.closeItemList();
+
+    EXPECT_TRUE(closed.isActive());
+    EXPECT_FALSE(closed.showItemList());
+}
+
+TEST_F(MenuStateTest, CloseSaveSlotReturnsToMenu) {
+    MenuState state = MenuState::open()
+        .moveDown()  // Items
+        .moveDown()  // PhraseBook
+        .moveDown()  // Save
+        .select();   // Show save slot
+
+    EXPECT_TRUE(state.showSaveSlot());
+
+    MenuState closed = state.closeSaveSlot();
+
+    EXPECT_TRUE(closed.isActive());
+    EXPECT_FALSE(closed.showSaveSlot());
+}
+
+TEST_F(MenuStateTest, ClosePhraseBookReturnsToMenu) {
+    MenuState state = MenuState::open()
+        .moveDown()  // Items
+        .moveDown()  // PhraseBook
+        .select();   // Show phrase book
+
+    EXPECT_TRUE(state.showPhraseBook());
+
+    MenuState closed = state.closePhraseBook();
+
+    EXPECT_TRUE(closed.isActive());
+    EXPECT_FALSE(closed.showPhraseBook());
+}
+
+// === Immutability Tests ===
+
+TEST_F(MenuStateTest, MoveDownIsImmutable) {
+    MenuState state = MenuState::open();
+
+    MenuState moved = state.moveDown();
+
+    EXPECT_EQ(state.getCursorIndex(), 0);
+    EXPECT_EQ(moved.getCursorIndex(), 1);
+}
+
+TEST_F(MenuStateTest, MoveUpIsImmutable) {
+    MenuState state = MenuState::open().moveDown().moveDown();
+
+    MenuState moved = state.moveUp();
+
+    EXPECT_EQ(state.getCursorIndex(), 2);
+    EXPECT_EQ(moved.getCursorIndex(), 1);
+}
+
+TEST_F(MenuStateTest, SelectIsImmutable) {
+    MenuState state = MenuState::open();  // At Status
+
+    MenuState selected = state.select();
+
+    EXPECT_FALSE(state.showStatus());
+    EXPECT_TRUE(selected.showStatus());
+}
+
+// === Edge Cases ===
+
+TEST_F(MenuStateTest, GetItemAtValidIndex) {
+    MenuState state = MenuState::open();
+
+    EXPECT_EQ(state.getItemAt(0), MenuItem::Status);
+    EXPECT_EQ(state.getItemAt(1), MenuItem::Items);
+    EXPECT_EQ(state.getItemAt(4), MenuItem::Return);
+}
+
+TEST_F(MenuStateTest, GetItemAtInvalidIndexReturnsReturn) {
+    MenuState state = MenuState::open();
+
+    EXPECT_EQ(state.getItemAt(-1), MenuItem::Return);
+    EXPECT_EQ(state.getItemAt(100), MenuItem::Return);
+}
+
+TEST_F(MenuStateTest, GetCurrentItemOnInactiveReturnsReturn) {
+    MenuState state = MenuState::inactive();
+
     EXPECT_EQ(state.getCurrentItem(), MenuItem::Return);
 }

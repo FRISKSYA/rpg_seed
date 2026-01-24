@@ -879,3 +879,56 @@ TEST_F(SaveManagerTest, SaveFileIsCompact) {
     EXPECT_LT(fileSize, 1024u);
     EXPECT_GT(fileSize, 0u);
 }
+
+// Test 48: save/load roundtrip preserves collected topic IDs
+TEST_F(SaveManagerTest, SaveLoadRoundtripPreservesCollectedTopicIds) {
+    SaveManager manager(testSaveDir);
+
+    std::vector<std::string> topicIds = {"greeting_basic", "thanks_response", "how_are_you"};
+    SaveData original = SaveData::create(
+        PlayerStats::create("Hero"),
+        Inventory::empty(),
+        "test.csv",
+        Vec2{0, 0},
+        Direction::Up,
+        0,
+        0,
+        topicIds
+    );
+
+    (void)manager.save(0, original);
+    auto loaded = manager.load(0);
+
+    ASSERT_TRUE(loaded.has_value());
+    EXPECT_EQ(static_cast<int>(loaded->collectedTopicIds.size()), 3);
+
+    // Check all IDs are present (order may vary)
+    for (const auto& id : topicIds) {
+        bool found = std::find(loaded->collectedTopicIds.begin(),
+                               loaded->collectedTopicIds.end(), id)
+                     != loaded->collectedTopicIds.end();
+        EXPECT_TRUE(found) << "Missing topic ID: " << id;
+    }
+}
+
+// Test 49: save/load roundtrip with empty collected topic IDs
+TEST_F(SaveManagerTest, SaveLoadRoundtripPreservesEmptyCollectedTopicIds) {
+    SaveManager manager(testSaveDir);
+
+    SaveData original = SaveData::create(
+        PlayerStats::create("Hero"),
+        Inventory::empty(),
+        "test.csv",
+        Vec2{0, 0},
+        Direction::Up,
+        0,
+        0,
+        {}  // Empty vector
+    );
+
+    (void)manager.save(0, original);
+    auto loaded = manager.load(0);
+
+    ASSERT_TRUE(loaded.has_value());
+    EXPECT_TRUE(loaded->collectedTopicIds.empty());
+}

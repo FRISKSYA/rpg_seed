@@ -48,7 +48,7 @@ namespace Constants {
     constexpr int MENU_BOX_X = 8;
     constexpr int MENU_BOX_Y = 8;
     constexpr int MENU_BOX_WIDTH = 80;
-    constexpr int MENU_BOX_HEIGHT = 72;
+    constexpr int MENU_BOX_HEIGHT = 84;  // 5 items * 12 + padding * 2
     constexpr int MENU_ITEM_HEIGHT = 12;
     constexpr int MENU_CURSOR_OFFSET = 4;
 
@@ -118,6 +118,16 @@ namespace Constants {
     constexpr int BATTLE_CONVERSATION_BOX_HEIGHT = 92;
     constexpr int BATTLE_CHOICE_ITEM_HEIGHT = 20;
     constexpr int BATTLE_CHOICE_START_Y = 36;  // Offset from box top for first choice
+
+    // Phrase book box settings
+    constexpr int PHRASE_BOOK_BOX_X = 8;
+    constexpr int PHRASE_BOOK_BOX_Y = 8;
+    constexpr int PHRASE_BOOK_BOX_WIDTH = 304;
+    constexpr int PHRASE_BOOK_BOX_HEIGHT = 224;
+    constexpr int PHRASE_BOOK_ITEM_HEIGHT = 24;  // Each phrase takes 2 lines
+    constexpr int PHRASE_BOOK_CURSOR_OFFSET = 4;
+    constexpr int PHRASE_BOOK_VISIBLE_ROWS = 8;
+    constexpr int PHRASE_BOOK_TITLE_HEIGHT = 20;
 
     // Window title
     constexpr const char* WINDOW_TITLE = "RPG Seed";

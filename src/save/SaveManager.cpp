@@ -100,6 +100,13 @@ std::vector<char> SaveManager::serialize(const SaveData& data) {
     // Write timestamp
     writePrimitive(data.timestamp);
 
+    // Write collected topic IDs (phrase collection)
+    uint32_t topicCount = static_cast<uint32_t>(data.collectedTopicIds.size());
+    writePrimitive(topicCount);
+    for (const auto& topicId : data.collectedTopicIds) {
+        writeString(topicId);
+    }
+
     // Calculate and write checksum (skip version and checksum bytes)
     size_t dataStart = sizeof(uint32_t) + sizeof(uint32_t);  // Skip version + checksum
     uint32_t checksum = calculateChecksum(
@@ -210,6 +217,20 @@ std::optional<SaveData> SaveManager::deserialize(const std::vector<char>& buffer
     time_t timestamp;
     if (!readPrimitive(timestamp)) return std::nullopt;
 
+    // Read collected topic IDs (phrase collection)
+    // For backward compatibility with version 1, default to empty
+    std::vector<std::string> collectedTopicIds;
+    if (version >= 2) {
+        uint32_t topicCount;
+        if (!readPrimitive(topicCount)) return std::nullopt;
+        collectedTopicIds.reserve(topicCount);
+        for (uint32_t i = 0; i < topicCount; ++i) {
+            std::string topicId;
+            if (!readString(topicId)) return std::nullopt;
+            collectedTopicIds.push_back(std::move(topicId));
+        }
+    }
+
     // Reconstruct PlayerStats using restore factory method
     PlayerStats stats = PlayerStats::restore(
         name, level, hp, maxHp, mp, maxMp, exp, gold
@@ -222,7 +243,8 @@ std::optional<SaveData> SaveManager::deserialize(const std::vector<char>& buffer
         Vec2{posX, posY},
         facing,
         playTimeSeconds,
-        timestamp
+        timestamp,
+        std::move(collectedTopicIds)
     );
 }
 

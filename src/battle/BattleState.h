@@ -227,7 +227,7 @@ public:
                 newAffinity,
                 affinityThreshold_,
                 personality_,
-                std::nullopt,
+                currentTopic_,  // Keep topic for phrase collection
                 0
             };
         }

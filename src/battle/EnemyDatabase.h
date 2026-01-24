@@ -25,16 +25,6 @@ public:
         return std::nullopt;
     }
 
-    // Find enemy by display name
-    [[nodiscard]] std::optional<EnemyDefinition> findByName(const std::string& name) const {
-        for (const auto& enemy : enemies_) {
-            if (enemy.name == name) {
-                return enemy;
-            }
-        }
-        return std::nullopt;
-    }
-
     // Get enemies available for a given area level
     // Returns enemies appropriate for the area difficulty
     [[nodiscard]] std::vector<EnemyDefinition> getEnemiesForArea(int areaLevel) const {

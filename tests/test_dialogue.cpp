@@ -115,3 +115,29 @@ TEST_F(DialogueStateTest, EmptyPagesCreatesActiveButEmpty) {
     EXPECT_EQ(state.getPageCount(), 0);
     EXPECT_TRUE(state.getCurrentText().empty());
 }
+
+// === Immutability Tests ===
+
+TEST_F(DialogueStateTest, AdvanceIsImmutable) {
+    DialogueState state = DialogueState::create(pages_);
+
+    DialogueState next = state.advance();
+
+    // Original unchanged
+    EXPECT_EQ(state.getCurrentPage(), 0);
+    EXPECT_EQ(state.getCurrentText(), "Hello, traveler!");
+    // New state advanced
+    EXPECT_EQ(next.getCurrentPage(), 1);
+    EXPECT_EQ(next.getCurrentText(), "Welcome to our village.");
+}
+
+TEST_F(DialogueStateTest, AdvanceToCloseIsImmutable) {
+    DialogueState state = DialogueState::create(pages_)
+        .advance()
+        .advance();  // Last page
+
+    DialogueState closed = state.advance();
+
+    EXPECT_TRUE(state.isActive());
+    EXPECT_FALSE(closed.isActive());
+}

@@ -3,12 +3,14 @@
 
 #include <string>
 #include <ctime>
+#include <vector>
 #include "game/PlayerStats.h"
 #include "inventory/Inventory.h"
 #include "util/Vec2.h"
 
 // Version constant for save data compatibility
-constexpr uint32_t SAVE_DATA_VERSION = 1;
+// Version 2: Added collectedTopicIds for phrase collection
+constexpr uint32_t SAVE_DATA_VERSION = 2;
 
 // Immutable save data structure
 // Contains all information needed to restore game state
@@ -21,6 +23,7 @@ struct SaveData {
     const uint32_t playTimeSeconds;
     const time_t timestamp;
     const uint32_t version;
+    const std::vector<std::string> collectedTopicIds;  // Collected phrase IDs
 
     // Factory method: create SaveData with all fields
     [[nodiscard]] static SaveData create(
@@ -30,7 +33,8 @@ struct SaveData {
         Vec2 pos,
         Direction dir,
         uint32_t playTime,
-        time_t time
+        time_t time,
+        std::vector<std::string> phraseIds = {}
     ) {
         return SaveData{
             std::move(stats),
@@ -40,7 +44,8 @@ struct SaveData {
             dir,
             playTime,
             time,
-            SAVE_DATA_VERSION
+            SAVE_DATA_VERSION,
+            std::move(phraseIds)
         };
     }
 
@@ -54,7 +59,8 @@ private:
         Direction dir,
         uint32_t playTime,
         time_t time,
-        uint32_t ver
+        uint32_t ver,
+        std::vector<std::string> phraseIds
     )
         : playerStats(std::move(stats))
         , inventory(std::move(inv))
@@ -64,6 +70,7 @@ private:
         , playTimeSeconds(playTime)
         , timestamp(time)
         , version(ver)
+        , collectedTopicIds(std::move(phraseIds))
     {}
 };
 

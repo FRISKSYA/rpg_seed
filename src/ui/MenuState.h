@@ -7,8 +7,9 @@
 // Menu item identifiers
 enum class MenuItem {
     Status,
-    Items,    // Disabled initially
-    Save,     // Disabled initially
+    Items,
+    PhraseBook,  // Phrase collection viewer
+    Save,
     Return
 };
 
@@ -23,12 +24,13 @@ public:
     // Create active menu state
     static MenuState open() {
         return MenuState{
-            {MenuItem::Status, MenuItem::Items, MenuItem::Save, MenuItem::Return},
+            {MenuItem::Status, MenuItem::Items, MenuItem::PhraseBook, MenuItem::Save, MenuItem::Return},
             0,      // cursor at first item
             true,   // active
             false,  // showStatus
             false,  // showItemList
-            false   // showSaveSlot
+            false,  // showSaveSlot
+            false   // showPhraseBook
         };
     }
 
@@ -36,13 +38,13 @@ public:
     [[nodiscard]] MenuState moveUp() const {
         if (!isActive_) return *this;
         int newIndex = (cursorIndex_ - 1 + static_cast<int>(items_.size())) % static_cast<int>(items_.size());
-        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_};
+        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_, showPhraseBook_};
     }
 
     [[nodiscard]] MenuState moveDown() const {
         if (!isActive_) return *this;
         int newIndex = (cursorIndex_ + 1) % static_cast<int>(items_.size());
-        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_};
+        return MenuState{items_, newIndex, true, showStatus_, showItemList_, showSaveSlot_, showPhraseBook_};
     }
 
     // Select current item (returns new state based on selection)
@@ -54,15 +56,19 @@ public:
         switch (selected) {
             case MenuItem::Status:
                 // Toggle status panel
-                return MenuState{items_, cursorIndex_, true, !showStatus_, showItemList_, showSaveSlot_};
+                return MenuState{items_, cursorIndex_, true, !showStatus_, showItemList_, showSaveSlot_, showPhraseBook_};
 
             case MenuItem::Items:
                 // Open item list
-                return MenuState{items_, cursorIndex_, true, showStatus_, true, showSaveSlot_};
+                return MenuState{items_, cursorIndex_, true, showStatus_, true, showSaveSlot_, showPhraseBook_};
+
+            case MenuItem::PhraseBook:
+                // Open phrase book
+                return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, showSaveSlot_, true};
 
             case MenuItem::Save:
                 // Open save slot
-                return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, true};
+                return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, true, showPhraseBook_};
 
             case MenuItem::Return:
                 // Close menu
@@ -74,13 +80,19 @@ public:
     // Close item list (returns to menu)
     [[nodiscard]] MenuState closeItemList() const {
         if (!showItemList_) return *this;
-        return MenuState{items_, cursorIndex_, true, showStatus_, false, showSaveSlot_};
+        return MenuState{items_, cursorIndex_, true, showStatus_, false, showSaveSlot_, showPhraseBook_};
     }
 
     // Close save slot (returns to menu)
     [[nodiscard]] MenuState closeSaveSlot() const {
         if (!showSaveSlot_) return *this;
-        return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, false};
+        return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, false, showPhraseBook_};
+    }
+
+    // Close phrase book (returns to menu)
+    [[nodiscard]] MenuState closePhraseBook() const {
+        if (!showPhraseBook_) return *this;
+        return MenuState{items_, cursorIndex_, true, showStatus_, showItemList_, showSaveSlot_, false};
     }
 
     // Close menu (returns inactive state)
@@ -94,6 +106,7 @@ public:
     [[nodiscard]] bool showStatus() const { return showStatus_; }
     [[nodiscard]] bool showItemList() const { return showItemList_; }
     [[nodiscard]] bool showSaveSlot() const { return showSaveSlot_; }
+    [[nodiscard]] bool showPhraseBook() const { return showPhraseBook_; }
 
     [[nodiscard]] MenuItem getCurrentItem() const {
         if (!isActive_ || items_.empty()) return MenuItem::Return;
@@ -116,6 +129,7 @@ public:
         switch (item) {
             case MenuItem::Status:
             case MenuItem::Items:
+            case MenuItem::PhraseBook:
             case MenuItem::Save:
             case MenuItem::Return:
                 return true;
@@ -126,21 +140,22 @@ public:
     // Get item display name
     [[nodiscard]] static const char* getItemName(MenuItem item) {
         switch (item) {
-            case MenuItem::Status: return "Status";
-            case MenuItem::Items:  return "Items";
-            case MenuItem::Save:   return "Save";
-            case MenuItem::Return: return "Return";
+            case MenuItem::Status:     return "Status";
+            case MenuItem::Items:      return "Items";
+            case MenuItem::PhraseBook: return "Phrases";
+            case MenuItem::Save:       return "Save";
+            case MenuItem::Return:     return "Return";
         }
         return "";
     }
 
 private:
     // Private constructor for inactive state
-    MenuState() : items_{}, cursorIndex_(0), isActive_(false), showStatus_(false), showItemList_(false), showSaveSlot_(false) {}
+    MenuState() : items_{}, cursorIndex_(0), isActive_(false), showStatus_(false), showItemList_(false), showSaveSlot_(false), showPhraseBook_(false) {}
 
     // Private constructor for active state
-    MenuState(std::vector<MenuItem> items, int cursor, bool active, bool status, bool itemList, bool saveSlot)
-        : items_(std::move(items)), cursorIndex_(cursor), isActive_(active), showStatus_(status), showItemList_(itemList), showSaveSlot_(saveSlot) {}
+    MenuState(std::vector<MenuItem> items, int cursor, bool active, bool status, bool itemList, bool saveSlot, bool phraseBook)
+        : items_(std::move(items)), cursorIndex_(cursor), isActive_(active), showStatus_(status), showItemList_(itemList), showSaveSlot_(saveSlot), showPhraseBook_(phraseBook) {}
 
     std::vector<MenuItem> items_;
     int cursorIndex_;
@@ -148,6 +163,7 @@ private:
     bool showStatus_;
     bool showItemList_;
     bool showSaveSlot_;
+    bool showPhraseBook_;
 };
 
 #endif // MENU_STATE_H

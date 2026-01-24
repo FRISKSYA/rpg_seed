@@ -136,3 +136,63 @@ TEST_F(PlayerStatsTest, ImmutabilityChain) {
     EXPECT_EQ(stats.gold, 0);
     EXPECT_EQ(stats.exp, 0);
 }
+
+// === Overflow/Underflow Tests ===
+
+TEST_F(PlayerStatsTest, WithGoldLargeValue) {
+    PlayerStats stats = PlayerStats::create("Hero");
+
+    PlayerStats rich = stats.withGold(999999999);
+
+    EXPECT_EQ(rich.gold, 999999999);
+}
+
+TEST_F(PlayerStatsTest, WithExpLargeValue) {
+    PlayerStats stats = PlayerStats::create("Hero");
+
+    PlayerStats experienced = stats.withExp(999999999);
+
+    EXPECT_EQ(experienced.exp, 999999999);
+}
+
+TEST_F(PlayerStatsTest, LevelUpAtMaxLevelDoesNotOverflow) {
+    // Create stats at INT_MAX level
+    PlayerStats maxLevel = PlayerStats::restore("Hero", INT_MAX, 30, 30, 10, 10, 0, 0);
+
+    PlayerStats afterLevelUp = maxLevel.levelUp(40, 15);
+
+    // Level should stay at INT_MAX, not overflow to negative
+    EXPECT_EQ(afterLevelUp.level, INT_MAX);
+}
+
+TEST_F(PlayerStatsTest, HPCannotExceedMax) {
+    PlayerStats stats = PlayerStats::create("Hero");  // maxHp = 30
+
+    PlayerStats overhealed = stats.withHP(INT_MAX);
+
+    EXPECT_EQ(overhealed.hp, 30);  // Clamped to maxHp
+}
+
+TEST_F(PlayerStatsTest, MPCannotExceedMax) {
+    PlayerStats stats = PlayerStats::create("Hero");  // maxMp = 10
+
+    PlayerStats restored = stats.withMP(INT_MAX);
+
+    EXPECT_EQ(restored.mp, 10);  // Clamped to maxMp
+}
+
+TEST_F(PlayerStatsTest, NegativeGoldClampedToZero) {
+    PlayerStats stats = PlayerStats::create("Hero").withGold(100);
+
+    PlayerStats broke = stats.withGold(INT_MIN);
+
+    EXPECT_EQ(broke.gold, 0);  // Clamped to 0, not negative
+}
+
+TEST_F(PlayerStatsTest, NegativeExpClampedToZero) {
+    PlayerStats stats = PlayerStats::create("Hero").withExp(100);
+
+    PlayerStats reset = stats.withExp(INT_MIN);
+
+    EXPECT_EQ(reset.exp, 0);  // Clamped to 0, not negative
+}
