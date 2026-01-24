@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "ui/BattleBox.h"
 #include "battle/BattleState.h"
+#include "dialogue/ConversationTopic.h"
 #include "util/Constants.h"
 
 // Helper to create test enemy definition
@@ -29,6 +30,19 @@ namespace {
             20,      // maxMp
             0,       // exp
             100      // gold
+        );
+    }
+
+    ConversationTopic createTestTopic() {
+        return ConversationTopic::create(
+            "test_greeting",
+            "Saluton!",
+            "Hello!",
+            {
+                ConversationChoice::create("Saluton!", "Hello!", true, 100),  // Big affinity boost
+                ConversationChoice::create("...", "(silence)", false, -5)
+            },
+            1
         );
     }
 }
@@ -78,6 +92,24 @@ TEST_F(BattleBoxTest, EnemyAreaPositionIsUpperCenter) {
     EXPECT_EQ(rect.h, Constants::BATTLE_ENEMY_AREA_HEIGHT);
 }
 
+TEST_F(BattleBoxTest, AffinityBarPositionIsTopLeft) {
+    SDL_Rect rect = battleBox.getAffinityBarRect();
+
+    EXPECT_EQ(rect.x, Constants::BATTLE_AFFINITY_BAR_X);
+    EXPECT_EQ(rect.y, Constants::BATTLE_AFFINITY_BAR_Y);
+    EXPECT_EQ(rect.w, Constants::BATTLE_AFFINITY_BAR_WIDTH);
+    EXPECT_EQ(rect.h, Constants::BATTLE_AFFINITY_BAR_HEIGHT);
+}
+
+TEST_F(BattleBoxTest, ConversationBoxPositionIsBottom) {
+    SDL_Rect rect = battleBox.getConversationBoxRect();
+
+    EXPECT_EQ(rect.x, Constants::BATTLE_CONVERSATION_BOX_X);
+    EXPECT_EQ(rect.y, Constants::BATTLE_CONVERSATION_BOX_Y);
+    EXPECT_EQ(rect.w, Constants::BATTLE_CONVERSATION_BOX_WIDTH);
+    EXPECT_EQ(rect.h, Constants::BATTLE_CONVERSATION_BOX_HEIGHT);
+}
+
 // =============================================================================
 // Cursor Position Calculation Tests
 // =============================================================================
@@ -109,6 +141,31 @@ TEST_F(BattleBoxTest, CursorPositionForCommandIndex2) {
     int expectedX = Constants::BATTLE_COMMAND_BOX_X + Constants::BATTLE_CURSOR_OFFSET;
     int expectedY = Constants::BATTLE_COMMAND_BOX_Y + Constants::DIALOGUE_PADDING
                     + Constants::BATTLE_COMMAND_ITEM_HEIGHT * 2;
+
+    EXPECT_EQ(pos.x, expectedX);
+    EXPECT_EQ(pos.y, expectedY);
+}
+
+// =============================================================================
+// Choice Cursor Position Tests
+// =============================================================================
+
+TEST_F(BattleBoxTest, ChoiceCursorPositionForIndex0) {
+    Vec2 pos = battleBox.getChoiceCursorPosition(0);
+
+    int expectedX = Constants::BATTLE_CONVERSATION_BOX_X + Constants::BATTLE_CURSOR_OFFSET;
+    int expectedY = Constants::BATTLE_CONVERSATION_BOX_Y + Constants::BATTLE_CHOICE_START_Y;
+
+    EXPECT_EQ(pos.x, expectedX);
+    EXPECT_EQ(pos.y, expectedY);
+}
+
+TEST_F(BattleBoxTest, ChoiceCursorPositionForIndex1) {
+    Vec2 pos = battleBox.getChoiceCursorPosition(1);
+
+    int expectedX = Constants::BATTLE_CONVERSATION_BOX_X + Constants::BATTLE_CURSOR_OFFSET;
+    int expectedY = Constants::BATTLE_CONVERSATION_BOX_Y + Constants::BATTLE_CHOICE_START_Y
+                    + Constants::BATTLE_CHOICE_ITEM_HEIGHT;
 
     EXPECT_EQ(pos.x, expectedX);
     EXPECT_EQ(pos.y, expectedY);
@@ -181,6 +238,22 @@ TEST_F(BattleBoxTest, FormatHPTextAtMax) {
 }
 
 // =============================================================================
+// Affinity Text Formatting Tests
+// =============================================================================
+
+TEST_F(BattleBoxTest, FormatAffinityText) {
+    std::string affinityText = BattleBox::formatAffinityText(50, 100);
+
+    EXPECT_EQ(affinityText, "Affinity: 50/100");
+}
+
+TEST_F(BattleBoxTest, FormatAffinityTextWithZero) {
+    std::string affinityText = BattleBox::formatAffinityText(0, 100);
+
+    EXPECT_EQ(affinityText, "Affinity: 0/100");
+}
+
+// =============================================================================
 // Visibility Tests Based on Phase
 // =============================================================================
 
@@ -230,6 +303,28 @@ TEST_F(BattleBoxTest, StatusBoxNotVisibleWhenInactive) {
     EXPECT_FALSE(battleBox.isStatusBoxVisible(state));
 }
 
+TEST_F(BattleBoxTest, ConversationBoxVisibleInCommunicationSelectPhase) {
+    EnemyDefinition enemy = createTestEnemy();
+    PlayerStats player = createTestPlayer();
+    ConversationTopic topic = createTestTopic();
+    BattleState state = BattleState::inactive()
+        .encounter(enemy, player)
+        .toCommandSelect()
+        .selectTalk(topic);
+
+    EXPECT_TRUE(battleBox.isConversationBoxVisible(state));
+}
+
+TEST_F(BattleBoxTest, ConversationBoxNotVisibleInCommandSelectPhase) {
+    EnemyDefinition enemy = createTestEnemy();
+    PlayerStats player = createTestPlayer();
+    BattleState state = BattleState::inactive()
+        .encounter(enemy, player)
+        .toCommandSelect();
+
+    EXPECT_FALSE(battleBox.isConversationBoxVisible(state));
+}
+
 // =============================================================================
 // Color Constants Tests
 // =============================================================================
@@ -261,65 +356,75 @@ TEST_F(BattleBoxTest, BorderColorIsWhite) {
     EXPECT_EQ(color.a, 255);
 }
 
+TEST_F(BattleBoxTest, AffinityBarColorIsPink) {
+    SDL_Color color = BattleBox::getAffinityBarColor();
+
+    EXPECT_EQ(color.r, 255);
+    EXPECT_EQ(color.g, 105);
+    EXPECT_EQ(color.b, 180);
+    EXPECT_EQ(color.a, 255);
+}
+
 // =============================================================================
 // Additional Phase Visibility Tests
 // =============================================================================
 
-TEST_F(BattleBoxTest, CommandBoxNotVisibleInVictoryPhase) {
+TEST_F(BattleBoxTest, CommandBoxNotVisibleInFriendshipPhase) {
     EnemyDefinition enemy = createTestEnemy();
     PlayerStats player = createTestPlayer();
-    BattleState state = BattleState::inactive()
-        .encounter(enemy, player)
-        .toCommandSelect()
-        .selectAttack(100, false);  // Overkill damage to defeat enemy
+    ConversationTopic topic = createTestTopic();  // First choice gives +100 affinity
 
-    EXPECT_EQ(state.getPhase(), BattlePhase::Victory);
+    BattleState state = BattleState::inactive()
+        .encounter(enemy, player, Personality::Neutral, 50)  // Low threshold
+        .toCommandSelect()
+        .selectTalk(topic)
+        .chooseOption();  // Select correct answer -> Friendship
+
+    EXPECT_EQ(state.getPhase(), BattlePhase::Friendship);
     EXPECT_FALSE(battleBox.isCommandBoxVisible(state));
 }
 
-TEST_F(BattleBoxTest, MessageBoxVisibleInVictoryPhase) {
+TEST_F(BattleBoxTest, MessageBoxVisibleInFriendshipPhase) {
     EnemyDefinition enemy = createTestEnemy();
     PlayerStats player = createTestPlayer();
-    BattleState state = BattleState::inactive()
-        .encounter(enemy, player)
-        .toCommandSelect()
-        .selectAttack(100, false);  // Victory
+    ConversationTopic topic = createTestTopic();
 
-    EXPECT_TRUE(battleBox.isMessageBoxVisible(state));  // "Defeated Slime!"
+    BattleState state = BattleState::inactive()
+        .encounter(enemy, player, Personality::Neutral, 50)
+        .toCommandSelect()
+        .selectTalk(topic)
+        .chooseOption();
+
+    EXPECT_TRUE(battleBox.isMessageBoxVisible(state));  // "Slime became friendly!"
 }
 
-TEST_F(BattleBoxTest, StatusBoxVisibleInVictoryPhase) {
+TEST_F(BattleBoxTest, StatusBoxVisibleInFriendshipPhase) {
     EnemyDefinition enemy = createTestEnemy();
     PlayerStats player = createTestPlayer();
+    ConversationTopic topic = createTestTopic();
+
     BattleState state = BattleState::inactive()
-        .encounter(enemy, player)
+        .encounter(enemy, player, Personality::Neutral, 50)
         .toCommandSelect()
-        .selectAttack(100, false);
+        .selectTalk(topic)
+        .chooseOption();
 
     EXPECT_TRUE(battleBox.isStatusBoxVisible(state));
 }
 
-TEST_F(BattleBoxTest, CommandBoxNotVisibleInPlayerActionPhase) {
+TEST_F(BattleBoxTest, CommandBoxNotVisibleInCommunicationResultPhase) {
     EnemyDefinition enemy = createTestEnemy();
     PlayerStats player = createTestPlayer();
-    BattleState state = BattleState::inactive()
-        .encounter(enemy, player)
-        .toCommandSelect()
-        .selectAttack(5, false);  // Not enough to kill
+    ConversationTopic topic = createTestTopic();
 
-    EXPECT_EQ(state.getPhase(), BattlePhase::PlayerAction);
+    BattleState state = BattleState::inactive()
+        .encounter(enemy, player, Personality::Neutral, 200)  // High threshold
+        .toCommandSelect()
+        .selectTalk(topic)
+        .chooseOption();  // Result phase (not friendship yet)
+
+    EXPECT_EQ(state.getPhase(), BattlePhase::CommunicationResult);
     EXPECT_FALSE(battleBox.isCommandBoxVisible(state));
-}
-
-TEST_F(BattleBoxTest, MessageBoxVisibleAfterPlayerAttack) {
-    EnemyDefinition enemy = createTestEnemy();
-    PlayerStats player = createTestPlayer();
-    BattleState state = BattleState::inactive()
-        .encounter(enemy, player)
-        .toCommandSelect()
-        .selectAttack(5, false);
-
-    EXPECT_TRUE(battleBox.isMessageBoxVisible(state));
 }
 
 // =============================================================================

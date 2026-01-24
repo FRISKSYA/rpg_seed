@@ -113,7 +113,9 @@ void add(int dx, int dy) {
 | `src/ui/` | User interface (DialogueBox, MenuBox, StatusPanel, TextRenderer, ItemListBox, SaveSlotBox, BattleBox) |
 | `src/inventory/` | Inventory system (Item, ItemDatabase, Inventory) |
 | `src/save/` | Save/Load system (SaveManager, SaveData, SaveSlotInfo) |
-| `src/battle/` | Battle system (Enemy, EnemyDatabase, BattleState, DamageCalculator, EncounterManager) |
+| `src/battle/` | Battle system (Enemy, EnemyDatabase, BattleState, EncounterManager) |
+| `src/language/` | Esperanto vocabulary (Word, WordDatabase) |
+| `src/dialogue/` | Conversation system (ConversationTopic, TopicDatabase) |
 | `src/util/` | Utilities (Vec2, Constants) |
 | `data/maps/` | Map CSV files |
 | `assets/` | Graphics and assets |
@@ -222,7 +224,7 @@ lldb ./rpg_seed
 
 Target: 80%+ coverage on core logic
 
-Current: **551 tests** across **43 test suites** (20 test files)
+Current: **494 tests** across **41 test suites** (19 test files)
 
 ### Test Files
 
@@ -244,7 +246,6 @@ Current: **551 tests** across **43 test suites** (20 test files)
 | `test_save_manager.cpp` | SaveManager file operations |
 | `test_save_slot.cpp` | SaveSlotState UI |
 | `test_enemy.cpp` | Enemy definitions and EnemyDatabase |
-| `test_damage_calc.cpp` | DamageCalculator formulas |
-| `test_battle_state.cpp` | BattleState state machine |
+| `test_battle_state.cpp` | BattleState affinity-based state machine |
 | `test_battle_box.cpp` | BattleBox UI rendering |
 | `test_encounter.cpp` | EncounterManager random battles |

@@ -12,7 +12,7 @@
 #include "inventory/Inventory.h"
 #include "inventory/ItemDatabase.h"
 #include "battle/BattleState.h"
-#include "battle/DamageCalculator.h"
+#include "dialogue/ConversationTopic.h"
 
 // Immutable game state
 struct GameState {
@@ -199,25 +199,42 @@ struct GameState {
     }
 
     // Battle operations
-    [[nodiscard]] GameState startBattle(const EnemyDefinition& enemy) const {
+    [[nodiscard]] GameState startBattle(const EnemyDefinition& enemy, Personality personality = Personality::Neutral, int affinityThreshold = 100) const {
         if (battle.isActive() || dialogue.isActive() || menu.isActive()) return *this;
-        BattleState newBattle = battle.encounter(enemy, playerStats);
+        BattleState newBattle = battle.encounter(enemy, playerStats, personality, affinityThreshold);
         return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, newBattle};
     }
 
     [[nodiscard]] GameState battleMoveUp() const {
         if (!battle.isActive()) return *this;
-        return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveCommandUp()};
+        BattlePhase phase = battle.getPhase();
+        if (phase == BattlePhase::CommandSelect) {
+            return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveCommandUp()};
+        } else if (phase == BattlePhase::CommunicationSelect) {
+            return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveChoiceUp()};
+        }
+        return *this;
     }
 
     [[nodiscard]] GameState battleMoveDown() const {
         if (!battle.isActive()) return *this;
-        return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveCommandDown()};
+        BattlePhase phase = battle.getPhase();
+        if (phase == BattlePhase::CommandSelect) {
+            return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveCommandDown()};
+        } else if (phase == BattlePhase::CommunicationSelect) {
+            return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.moveChoiceDown()};
+        }
+        return *this;
     }
 
-    [[nodiscard]] GameState battleSelectAttack(int damage, bool isCritical) const {
+    [[nodiscard]] GameState battleSelectTalk(const ConversationTopic& topic) const {
         if (!battle.isActive()) return *this;
-        return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.selectAttack(damage, isCritical)};
+        return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.selectTalk(topic)};
+    }
+
+    [[nodiscard]] GameState battleChooseOption() const {
+        if (!battle.isActive()) return *this;
+        return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.chooseOption()};
     }
 
     [[nodiscard]] GameState battleSelectRun(bool success) const {
@@ -225,22 +242,15 @@ struct GameState {
         return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, battle.selectRun(success)};
     }
 
-    [[nodiscard]] GameState battleEnemyAction(int damage) const {
-        if (!battle.isActive()) return *this;
-        BattleState newBattle = battle.executeEnemyAction(damage);
-        // Update player HP based on battle state
-        PlayerStats newStats = playerStats.withHP(newBattle.getPlayerHP());
-        return GameState{player, camera, currentMapPath, dialogue, menu, newStats, inventory, itemList, saveSlot, newBattle};
-    }
-
     [[nodiscard]] GameState battleAdvance() const {
         if (!battle.isActive()) return *this;
         BattleState newBattle = battle.advanceMessage();
-        // If battle ended in victory, apply rewards
-        if (battle.getPhase() == BattlePhase::Victory && !newBattle.isActive()) {
+        // If battle ended (victory/friendship), apply rewards
+        BattlePhase phase = battle.getPhase();
+        if ((phase == BattlePhase::Victory || phase == BattlePhase::Friendship) && !newBattle.isActive()) {
             PlayerStats newStats = playerStats
-                .withExp(playerStats.exp + battle.getExpGained())
-                .withGold(playerStats.gold + battle.getGoldGained());
+                .withExp(playerStats.exp + battle.getExpReward())
+                .withGold(playerStats.gold + battle.getGoldReward());
             return GameState{player, camera, currentMapPath, dialogue, menu, newStats, inventory, itemList, saveSlot, newBattle};
         }
         return GameState{player, camera, currentMapPath, dialogue, menu, playerStats, inventory, itemList, saveSlot, newBattle};

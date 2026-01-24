@@ -1,8 +1,10 @@
 #include "game/Game.h"
 #include "battle/EnemyDatabase.h"
+#include "dialogue/TopicDatabase.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
+#include <random>
 
 Game::Game()
     : sdlInitialized_(false)
@@ -173,50 +175,43 @@ void Game::update() {
                 gameState_ = std::make_unique<GameState>(gameState_->battleMoveDown());
             } else if (input_.isConfirmPressed()) {
                 BattleCommand cmd = gameState_->battle.getSelectedCommand();
-                if (cmd == BattleCommand::Attack) {
-                    // Calculate damage using DamageCalculator
-                    bool isCritical = false;
-                    int enemyDef = 0;
-                    if (gameState_->battle.hasEnemy()) {
-                        auto enemy = EnemyDatabase::instance().findByName(gameState_->battle.getEnemyName());
-                        if (enemy) {
-                            enemyDef = enemy->defense;
-                        }
+                if (cmd == BattleCommand::Talk) {
+                    // Get a random conversation topic based on area level
+                    int areaLevel = (gameState_->currentMapPath.find("dungeon") != std::string::npos) ? 2 : 1;
+                    auto topic = TopicDatabase::instance().getRandomTopicForArea(areaLevel);
+                    if (topic) {
+                        gameState_ = std::make_unique<GameState>(gameState_->battleSelectTalk(*topic));
                     }
-                    int damage = DamageCalculator::calculatePlayerDamage(
-                        gameState_->playerStats.level * 5 + 10,  // Simple attack formula
-                        enemyDef,
-                        isCritical
-                    );
-                    gameState_ = std::make_unique<GameState>(gameState_->battleSelectAttack(damage, isCritical));
                 } else if (cmd == BattleCommand::Run) {
-                    int enemyAgi = 3;  // Default agility
-                    bool escaped = DamageCalculator::canEscape(
-                        gameState_->playerStats.level * 2 + 5,  // Simple agility formula
-                        enemyAgi
-                    );
+                    // Simple escape chance based on player level
+                    static std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
+                    std::uniform_int_distribution<int> dist(0, 100);
+                    bool escaped = dist(rng) < (50 + gameState_->playerStats.level * 5);
                     gameState_ = std::make_unique<GameState>(gameState_->battleSelectRun(escaped));
                 }
                 // Item command not yet implemented
             }
-        } else if (phase == BattlePhase::PlayerAction) {
-            // After player action, enemy attacks
-            if (input_.isConfirmPressed()) {
-                int enemyAtk = 2;  // Default attack
-                if (gameState_->battle.hasEnemy()) {
-                    auto enemy = EnemyDatabase::instance().findByName(gameState_->battle.getEnemyName());
-                    if (enemy) {
-                        enemyAtk = enemy->attack;
-                    }
-                }
-                int damage = DamageCalculator::calculateEnemyDamage(
-                    enemyAtk,
-                    gameState_->playerStats.level * 2 + 5  // Simple defense formula
-                );
-                gameState_ = std::make_unique<GameState>(gameState_->battleEnemyAction(damage));
+        } else if (phase == BattlePhase::CommunicationSelect) {
+            // Handle conversation choice selection
+            if (input_.isMenuUpPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleMoveUp());
+            } else if (input_.isMenuDownPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleMoveDown());
+            } else if (input_.isConfirmPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleChooseOption());
+            } else if (input_.isCancelPressed()) {
+                // Go back to command select
+                gameState_ = std::make_unique<GameState>(gameState_->battleAdvance());
             }
-        } else if (phase == BattlePhase::Encounter || phase == BattlePhase::EnemyAction ||
-                   phase == BattlePhase::Victory || phase == BattlePhase::Defeat ||
+        } else if (phase == BattlePhase::PlayerAction ||
+                   phase == BattlePhase::CommunicationResult) {
+            // Advance after failed escape or conversation result
+            if (input_.isConfirmPressed()) {
+                gameState_ = std::make_unique<GameState>(gameState_->battleAdvance());
+            }
+        } else if (phase == BattlePhase::Encounter ||
+                   phase == BattlePhase::Friendship ||
+                   phase == BattlePhase::Victory ||
                    phase == BattlePhase::Escaped) {
             // Advance message phases
             if (input_.isConfirmPressed()) {
@@ -324,11 +319,29 @@ void Game::update() {
         if (encounterManager_.shouldEncounter()) {
             auto enemy = encounterManager_.getEncounteredEnemyDefinition();
             if (enemy) {
-                gameState_ = std::make_unique<GameState>(gameState_->startBattle(*enemy));
+                // Randomly assign personality based on enemy type
+                Personality personality = getEncounterPersonality(enemy->id);
+                // Affinity threshold varies by personality
+                int threshold = (personality == Personality::Friendly) ? 60 : 100;
+                gameState_ = std::make_unique<GameState>(gameState_->startBattle(*enemy, personality, threshold));
             }
             encounterManager_.reset();
         }
     }
+}
+
+Personality Game::getEncounterPersonality(const std::string& enemyId) {
+    // Assign personalities based on enemy type
+    if (enemyId == "slime") {
+        return Personality::Friendly;  // Slimes are friendly
+    } else if (enemyId == "drakee") {
+        return Personality::Timid;     // Drakees are timid
+    } else if (enemyId == "ghost") {
+        return Personality::Neutral;   // Ghosts are neutral
+    } else if (enemyId == "skeleton") {
+        return Personality::Aggressive; // Skeletons are aggressive
+    }
+    return Personality::Neutral;
 }
 
 void Game::checkMapTransition() {

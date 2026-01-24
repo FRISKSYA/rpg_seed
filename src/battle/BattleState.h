@@ -4,30 +4,49 @@
 #include <string>
 #include <algorithm>
 #include <optional>
+#include <vector>
 #include "battle/Enemy.h"
 #include "game/PlayerStats.h"
+#include "dialogue/ConversationTopic.h"
+
+// Personality determines how encounter reacts to failed communication
+enum class Personality {
+    Timid = 0,      // Runs away on failure (player wins)
+    Neutral,        // Nothing happens (turn consumed)
+    Aggressive,     // Affinity decreases significantly
+    Friendly        // Affinity still slightly increases even on failure
+};
 
 // Battle phase enumeration
 enum class BattlePhase {
     Inactive = 0,
     Encounter,
     CommandSelect,
-    PlayerAction,
-    EnemyAction,
-    Victory,
-    Defeat,
-    Escaped
+    CommunicationSelect,  // Showing conversation choices
+    CommunicationResult,  // Showing result of conversation choice
+    PlayerAction,         // Transitional state after player action
+    Friendship,           // Affinity reached threshold - peaceful resolution
+    Victory,              // Legacy: encounter fled (timid) or other win conditions
+    Escaped               // Player successfully escaped
 };
 
 // Battle command enumeration
 enum class BattleCommand {
-    Attack = 0,
+    Talk = 0,
     Item,
     Run,
     Count  // Sentinel value for counting commands
 };
 
-// Immutable battle state machine
+// Battle end type for determining outcome
+enum class BattleEndType {
+    None,
+    Friendship,  // Affinity reached threshold
+    Victory,     // Encounter fled (timid personality)
+    Escaped      // Player escaped
+};
+
+// Immutable battle state machine for affinity-based encounters
 class BattleState {
 public:
     // Factory method: create inactive battle state
@@ -35,36 +54,51 @@ public:
         return BattleState{};
     }
 
-    // Start a new battle encounter
-    [[nodiscard]] BattleState encounter(const EnemyDefinition& enemyDef, const PlayerStats& player) const {
+    // Start a new encounter
+    [[nodiscard]] BattleState encounter(
+        const EnemyDefinition& enemyDef,
+        const PlayerStats& player,
+        Personality personality = Personality::Neutral,
+        int affinityThreshold = 100
+    ) const {
         return BattleState{
             BattlePhase::Encounter,
             std::make_optional<EnemyDefinition>(enemyDef),
-            enemyDef.maxHp,
             player.hp,
             player.maxHp,
             0,  // commandIndex
-            0,  // expGained
-            0,  // goldGained
-            enemyDef.name + " appeared!"
+            enemyDef.expReward,
+            enemyDef.goldReward,
+            enemyDef.name + " appeared!",
+            0,  // affinity starts at 0
+            affinityThreshold,
+            personality,
+            std::nullopt,  // no current topic
+            0              // choiceIndex
         };
     }
 
     // Transition to command select phase
     [[nodiscard]] BattleState toCommandSelect() const {
-        if (phase_ != BattlePhase::Encounter && phase_ != BattlePhase::EnemyAction) {
+        if (phase_ != BattlePhase::Encounter &&
+            phase_ != BattlePhase::PlayerAction &&
+            phase_ != BattlePhase::CommunicationResult) {
             return *this;
         }
         return BattleState{
             BattlePhase::CommandSelect,
             enemyDef_,
-            enemyHp_,
             playerHp_,
             playerMaxHp_,
             0,  // Reset cursor
-            expGained_,
-            goldGained_,
-            ""
+            expReward_,
+            goldReward_,
+            "",
+            affinity_,
+            affinityThreshold_,
+            personality_,
+            std::nullopt,
+            0
         };
     }
 
@@ -75,17 +109,7 @@ public:
         }
         int newIndex = (commandIndex_ - 1 + static_cast<int>(BattleCommand::Count))
                        % static_cast<int>(BattleCommand::Count);
-        return BattleState{
-            phase_,
-            enemyDef_,
-            enemyHp_,
-            playerHp_,
-            playerMaxHp_,
-            newIndex,
-            expGained_,
-            goldGained_,
-            message_
-        };
+        return withCommandIndex(newIndex);
     }
 
     // Move command cursor down
@@ -94,58 +118,144 @@ public:
             return *this;
         }
         int newIndex = (commandIndex_ + 1) % static_cast<int>(BattleCommand::Count);
-        return BattleState{
-            phase_,
-            enemyDef_,
-            enemyHp_,
-            playerHp_,
-            playerMaxHp_,
-            newIndex,
-            expGained_,
-            goldGained_,
-            message_
-        };
+        return withCommandIndex(newIndex);
     }
 
-    // Execute attack action with pre-calculated damage
-    [[nodiscard]] BattleState selectAttack(int damage, bool isCritical) const {
+    // Select Talk command - transition to communication select with a topic
+    [[nodiscard]] BattleState selectTalk(const ConversationTopic& topic) const {
         if (phase_ != BattlePhase::CommandSelect) {
             return *this;
         }
+        return BattleState{
+            BattlePhase::CommunicationSelect,
+            enemyDef_,
+            playerHp_,
+            playerMaxHp_,
+            0,  // choice index starts at 0
+            expReward_,
+            goldReward_,
+            topic.promptEsperanto + "\n(" + topic.promptJapanese + ")",
+            affinity_,
+            affinityThreshold_,
+            personality_,
+            std::make_optional(topic),
+            0
+        };
+    }
 
-        int newEnemyHp = std::max(0, enemyHp_ - damage);
-        std::string attackMsg = "Dealt " + std::to_string(damage) + " damage";
-        if (isCritical) {
-            attackMsg += " (Critical!)";
+    // Move conversation choice up
+    [[nodiscard]] BattleState moveChoiceUp() const {
+        if (phase_ != BattlePhase::CommunicationSelect || !currentTopic_) {
+            return *this;
         }
-        attackMsg += " to " + getEnemyName() + "!";
+        int choiceCount = static_cast<int>(currentTopic_->getChoiceCount());
+        int newIndex = (choiceIndex_ - 1 + choiceCount) % choiceCount;
+        return withChoiceIndex(newIndex);
+    }
 
-        // Check if enemy defeated
-        if (newEnemyHp <= 0) {
-            std::string victoryMsg = "Defeated " + getEnemyName() + "!";
+    // Move conversation choice down
+    [[nodiscard]] BattleState moveChoiceDown() const {
+        if (phase_ != BattlePhase::CommunicationSelect || !currentTopic_) {
+            return *this;
+        }
+        int choiceCount = static_cast<int>(currentTopic_->getChoiceCount());
+        int newIndex = (choiceIndex_ + 1) % choiceCount;
+        return withChoiceIndex(newIndex);
+    }
+
+    // Choose a conversation option
+    [[nodiscard]] BattleState chooseOption() const {
+        if (phase_ != BattlePhase::CommunicationSelect || !currentTopic_) {
+            return *this;
+        }
+
+        const ConversationChoice* choice = currentTopic_->getChoice(static_cast<size_t>(choiceIndex_));
+        if (!choice) {
+            return *this;
+        }
+
+        int affinityChange = choice->affinityChange;
+
+        // Apply personality modifiers for incorrect answers
+        if (!choice->isCorrect) {
+            switch (personality_) {
+                case Personality::Timid:
+                    // Timid encounter flees - player wins
+                    return BattleState{
+                        BattlePhase::Victory,
+                        enemyDef_,
+                        playerHp_,
+                        playerMaxHp_,
+                        commandIndex_,
+                        expReward_,
+                        goldReward_,
+                        getEnemyName() + " ran away!",
+                        affinity_,
+                        affinityThreshold_,
+                        personality_,
+                        std::nullopt,
+                        0
+                    };
+                case Personality::Aggressive:
+                    // Aggressive: extra affinity penalty
+                    affinityChange = std::min(affinityChange, -15);
+                    break;
+                case Personality::Friendly:
+                    // Friendly: even wrong answers give small boost
+                    affinityChange = std::max(affinityChange, 5);
+                    break;
+                case Personality::Neutral:
+                default:
+                    // Neutral: use base affinity change
+                    break;
+            }
+        }
+
+        int newAffinity = std::clamp(affinity_ + affinityChange, 0, 100);
+
+        // Check for friendship (affinity threshold reached)
+        if (newAffinity >= affinityThreshold_) {
             return BattleState{
-                BattlePhase::Victory,
+                BattlePhase::Friendship,
                 enemyDef_,
-                0,
                 playerHp_,
                 playerMaxHp_,
                 commandIndex_,
-                enemyDef_ ? enemyDef_->expReward : 0,
-                enemyDef_ ? enemyDef_->goldReward : 0,
-                victoryMsg
+                expReward_,
+                goldReward_,
+                getEnemyName() + " became friendly!",
+                newAffinity,
+                affinityThreshold_,
+                personality_,
+                std::nullopt,
+                0
             };
         }
 
+        // Show result message
+        std::string resultMsg = choice->esperanto + "\n(" + choice->japanese + ")";
+        if (choice->isCorrect) {
+            resultMsg += "\n>> Good response!";
+        } else if (personality_ == Personality::Aggressive) {
+            resultMsg += "\n>> " + getEnemyName() + " looks annoyed...";
+        } else if (personality_ == Personality::Friendly) {
+            resultMsg += "\n>> " + getEnemyName() + " smiles anyway.";
+        }
+
         return BattleState{
-            BattlePhase::PlayerAction,
+            BattlePhase::CommunicationResult,
             enemyDef_,
-            newEnemyHp,
             playerHp_,
             playerMaxHp_,
             commandIndex_,
-            expGained_,
-            goldGained_,
-            attackMsg
+            expReward_,
+            goldReward_,
+            resultMsg,
+            newAffinity,
+            affinityThreshold_,
+            personality_,
+            std::nullopt,
+            0
         };
     }
 
@@ -159,63 +269,34 @@ public:
             return BattleState{
                 BattlePhase::Escaped,
                 enemyDef_,
-                enemyHp_,
                 playerHp_,
                 playerMaxHp_,
                 commandIndex_,
+                0,  // No rewards on escape
                 0,
-                0,
-                "Escaped successfully!"
+                "Escaped successfully!",
+                affinity_,
+                affinityThreshold_,
+                personality_,
+                std::nullopt,
+                0
             };
         }
 
         return BattleState{
             BattlePhase::PlayerAction,
             enemyDef_,
-            enemyHp_,
             playerHp_,
             playerMaxHp_,
             commandIndex_,
-            expGained_,
-            goldGained_,
-            "Couldn't escape!"
-        };
-    }
-
-    // Execute enemy action with pre-calculated damage
-    [[nodiscard]] BattleState executeEnemyAction(int damage) const {
-        if (phase_ != BattlePhase::PlayerAction) {
-            return *this;
-        }
-
-        int newPlayerHp = std::max(0, playerHp_ - damage);
-        std::string attackMsg = getEnemyName() + " dealt " + std::to_string(damage) + " damage!";
-
-        // Check if player defeated
-        if (newPlayerHp <= 0) {
-            return BattleState{
-                BattlePhase::Defeat,
-                enemyDef_,
-                enemyHp_,
-                0,
-                playerMaxHp_,
-                commandIndex_,
-                0,
-                0,
-                "You have been defeated..."
-            };
-        }
-
-        return BattleState{
-            BattlePhase::EnemyAction,
-            enemyDef_,
-            enemyHp_,
-            newPlayerHp,
-            playerMaxHp_,
-            commandIndex_,
-            expGained_,
-            goldGained_,
-            attackMsg
+            expReward_,
+            goldReward_,
+            "Couldn't escape!",
+            affinity_,
+            affinityThreshold_,
+            personality_,
+            std::nullopt,
+            0
         };
     }
 
@@ -225,21 +306,12 @@ public:
             case BattlePhase::Encounter:
                 return toCommandSelect();
 
-            case BattlePhase::EnemyAction:
-                return BattleState{
-                    BattlePhase::CommandSelect,
-                    enemyDef_,
-                    enemyHp_,
-                    playerHp_,
-                    playerMaxHp_,
-                    0,
-                    expGained_,
-                    goldGained_,
-                    ""
-                };
+            case BattlePhase::PlayerAction:
+            case BattlePhase::CommunicationResult:
+                return toCommandSelect();
 
+            case BattlePhase::Friendship:
             case BattlePhase::Victory:
-            case BattlePhase::Defeat:
             case BattlePhase::Escaped:
                 return inactive();
 
@@ -265,14 +337,6 @@ public:
         return enemyDef_ ? enemyDef_->name : "";
     }
 
-    [[nodiscard]] int getEnemyHP() const {
-        return enemyHp_;
-    }
-
-    [[nodiscard]] int getEnemyMaxHP() const {
-        return enemyDef_ ? enemyDef_->maxHp : 0;
-    }
-
     [[nodiscard]] int getPlayerHP() const {
         return playerHp_;
     }
@@ -285,12 +349,12 @@ public:
         return message_;
     }
 
-    [[nodiscard]] int getExpGained() const {
-        return expGained_;
+    [[nodiscard]] int getExpReward() const {
+        return expReward_;
     }
 
-    [[nodiscard]] int getGoldGained() const {
-        return goldGained_;
+    [[nodiscard]] int getGoldReward() const {
+        return goldReward_;
     }
 
     [[nodiscard]] int getCommandIndex() const {
@@ -301,13 +365,50 @@ public:
         return static_cast<BattleCommand>(commandIndex_);
     }
 
+    [[nodiscard]] int getAffinity() const {
+        return affinity_;
+    }
+
+    [[nodiscard]] int getAffinityThreshold() const {
+        return affinityThreshold_;
+    }
+
+    [[nodiscard]] Personality getPersonality() const {
+        return personality_;
+    }
+
+    [[nodiscard]] bool hasCurrentTopic() const {
+        return currentTopic_.has_value();
+    }
+
+    [[nodiscard]] const ConversationTopic* getCurrentTopic() const {
+        return currentTopic_ ? &(*currentTopic_) : nullptr;
+    }
+
+    [[nodiscard]] int getChoiceIndex() const {
+        return choiceIndex_;
+    }
+
+    [[nodiscard]] BattleEndType getBattleEndType() const {
+        switch (phase_) {
+            case BattlePhase::Friendship:
+                return BattleEndType::Friendship;
+            case BattlePhase::Victory:
+                return BattleEndType::Victory;
+            case BattlePhase::Escaped:
+                return BattleEndType::Escaped;
+            default:
+                return BattleEndType::None;
+        }
+    }
+
     // Static utility methods
     static const char* getCommandName(BattleCommand cmd) {
         switch (cmd) {
-            case BattleCommand::Attack: return "Attack";
-            case BattleCommand::Item:   return "Item";
-            case BattleCommand::Run:    return "Run";
-            default:                    return "";
+            case BattleCommand::Talk: return "Talk";
+            case BattleCommand::Item: return "Item";
+            case BattleCommand::Run:  return "Run";
+            default:                  return "";
         }
     }
 
@@ -315,50 +416,114 @@ public:
         return static_cast<int>(BattleCommand::Count);
     }
 
+    static const char* getPersonalityName(Personality p) {
+        switch (p) {
+            case Personality::Timid:      return "Timid";
+            case Personality::Neutral:    return "Neutral";
+            case Personality::Aggressive: return "Aggressive";
+            case Personality::Friendly:   return "Friendly";
+            default:                      return "";
+        }
+    }
+
 private:
     // Private constructor for inactive state
     BattleState()
         : phase_(BattlePhase::Inactive)
         , enemyDef_(std::nullopt)
-        , enemyHp_(0)
         , playerHp_(0)
         , playerMaxHp_(0)
         , commandIndex_(0)
-        , expGained_(0)
-        , goldGained_(0)
-        , message_() {}
+        , expReward_(0)
+        , goldReward_(0)
+        , message_()
+        , affinity_(0)
+        , affinityThreshold_(100)
+        , personality_(Personality::Neutral)
+        , currentTopic_(std::nullopt)
+        , choiceIndex_(0) {}
 
     // Private constructor for active states
     BattleState(
         BattlePhase phase,
         std::optional<EnemyDefinition> enemyDef,
-        int enemyHp,
         int playerHp,
         int playerMaxHp,
         int commandIndex,
-        int expGained,
-        int goldGained,
-        std::string message
+        int expReward,
+        int goldReward,
+        std::string message,
+        int affinity,
+        int affinityThreshold,
+        Personality personality,
+        std::optional<ConversationTopic> currentTopic,
+        int choiceIndex
     )
         : phase_(phase)
         , enemyDef_(std::move(enemyDef))
-        , enemyHp_(enemyHp)
         , playerHp_(playerHp)
         , playerMaxHp_(playerMaxHp)
         , commandIndex_(commandIndex)
-        , expGained_(expGained)
-        , goldGained_(goldGained)
-        , message_(std::move(message)) {}
+        , expReward_(expReward)
+        , goldReward_(goldReward)
+        , message_(std::move(message))
+        , affinity_(affinity)
+        , affinityThreshold_(affinityThreshold)
+        , personality_(personality)
+        , currentTopic_(std::move(currentTopic))
+        , choiceIndex_(choiceIndex) {}
+
+    // Helper to create new state with different command index
+    [[nodiscard]] BattleState withCommandIndex(int newIndex) const {
+        return BattleState{
+            phase_,
+            enemyDef_,
+            playerHp_,
+            playerMaxHp_,
+            newIndex,
+            expReward_,
+            goldReward_,
+            message_,
+            affinity_,
+            affinityThreshold_,
+            personality_,
+            currentTopic_,
+            choiceIndex_
+        };
+    }
+
+    // Helper to create new state with different choice index
+    [[nodiscard]] BattleState withChoiceIndex(int newIndex) const {
+        return BattleState{
+            phase_,
+            enemyDef_,
+            playerHp_,
+            playerMaxHp_,
+            commandIndex_,
+            expReward_,
+            goldReward_,
+            message_,
+            affinity_,
+            affinityThreshold_,
+            personality_,
+            currentTopic_,
+            newIndex
+        };
+    }
 
     BattlePhase phase_;
     std::optional<EnemyDefinition> enemyDef_;
-    int enemyHp_;
     int playerHp_;
     int playerMaxHp_;
     int commandIndex_;
-    int expGained_;
-    int goldGained_;
+    int expReward_;
+    int goldReward_;
     std::string message_;
+    int affinity_;
+    int affinityThreshold_;
+    Personality personality_;
+    std::optional<ConversationTopic> currentTopic_;
+    int choiceIndex_;
 };
 
 #endif // BATTLE_STATE_H

@@ -45,12 +45,23 @@ make clean && make
 | X / Backspace | Cancel / Close menu |
 | ESC / Space / M | Open/Close menu |
 
-### Battle Controls
+### Battle Controls (Affinity-based Communication System)
 
 | Key | Action |
 |-----|--------|
-| Up/Down | Select battle command |
-| Z / Enter | Confirm command / Advance message |
+| Up/Down | Select command (Talk/Item/Run) or conversation choice |
+| Z / Enter | Confirm command / Select choice / Advance message |
+| X / Backspace | Cancel / Go back to command select |
+
+**Battle Commands:**
+- **Talk** - Start conversation, select response to increase affinity
+- **Item** - Use item (not yet implemented)
+- **Run** - Attempt to escape
+
+**Victory Conditions:**
+- Affinity reaches threshold → Friendship (peaceful resolution)
+- Timid encounter runs away → Victory
+- Successful escape → Escaped
 
 ## Testing
 
@@ -61,9 +72,9 @@ make test
 
 ### Expected Output
 ```
-[==========] Running 551 tests from 43 test suites.
+[==========] Running 494 tests from 41 test suites.
 ...
-[  PASSED  ] 551 tests.
+[  PASSED  ] 494 tests.
 ```
 
 ### Test Suites
@@ -86,9 +97,8 @@ make test
 | `test_save_manager.cpp` | SaveManager file operations |
 | `test_save_slot.cpp` | SaveSlotState UI |
 | `test_enemy.cpp` | Enemy definitions and EnemyDatabase |
-| `test_damage_calc.cpp` | DamageCalculator formulas |
-| `test_battle_state.cpp` | BattleState state machine |
-| `test_battle_box.cpp` | BattleBox UI rendering |
+| `test_battle_state.cpp` | BattleState affinity-based state machine |
+| `test_battle_box.cpp` | BattleBox UI rendering (affinity bar, conversation) |
 | `test_encounter.cpp` | EncounterManager random battles |
 
 ## Common Issues and Fixes
@@ -290,7 +300,8 @@ brew info googletest
 | 3 | Menu System (pause menu, status display, player stats) | Complete |
 | 4 | Inventory System (Item, ItemDatabase, Inventory, ItemListBox) | Complete |
 | 5 | Save/Load System (SaveManager, SaveData, SaveSlotInfo) | Complete |
-| 6 | Battle System (Enemy, BattleState, DamageCalculator, EncounterManager) | Complete |
+| 6 | Battle System (Enemy, BattleState, EncounterManager) | Complete |
+| 7 | Esperanto Communication System (affinity-based, conversation topics, personality) | Complete |
 
 ## Architecture Notes
 
@@ -298,14 +309,23 @@ brew info googletest
 All state classes (GameState, Player, BattleState, MenuState, DialogueState, etc.) are immutable. State updates return new objects:
 ```cpp
 GameState newState = gameState->update(direction, map);
-BattleState afterAttack = battle.selectAttack(damage, isCritical);
+BattleState afterTalk = battle.selectTalk(topic).chooseOption();
 ```
 
 ### Singleton Databases
 - `ItemDatabase::instance()` - item definitions
 - `EnemyDatabase::instance()` - enemy definitions
+- `WordDatabase::instance()` - Esperanto vocabulary
+- `TopicDatabase::instance()` - conversation topics
 
 ### State Machine Phases
-- **BattleState**: Inactive -> Encounter -> CommandSelect -> PlayerAction/EnemyAction -> Victory/Defeat/Escaped
+- **BattleState**: Inactive -> Encounter -> CommandSelect -> CommunicationSelect -> CommunicationResult -> Friendship/Victory/Escaped
 - **MenuState**: Closed -> Open (with sub-states for Item, Save, Status)
 - **DialogueState**: Inactive -> Active (with page index)
+
+### Personality System
+Encounters have personalities that affect conversation outcomes:
+- **Timid**: Runs away on wrong answer (player wins)
+- **Neutral**: Standard behavior
+- **Aggressive**: Extra affinity penalty on wrong answers
+- **Friendly**: Gives affinity even on wrong answers

@@ -20,7 +20,7 @@ RPG Seed is a retro-style RPG field system inspired by NES-era games (Dragon Que
 |---------|-------------|
 | `make` | Build the release executable |
 | `make debug` | Build with debug symbols (-g -DDEBUG) |
-| `make test` | Build and run all unit tests (551 tests) |
+| `make test` | Build and run all unit tests (494 tests) |
 | `make clean` | Remove all build artifacts |
 
 ## Project Structure
@@ -68,9 +68,14 @@ rpg_seed/
 │   ├── battle/
 │   │   ├── Enemy.h               # Enemy definition and instance
 │   │   ├── EnemyDatabase.h       # Singleton enemy data repository
-│   │   ├── BattleState.h         # Immutable battle state machine
-│   │   ├── DamageCalculator.h    # Combat formula calculations
+│   │   ├── BattleState.h         # Immutable battle state machine (affinity-based)
 │   │   └── EncounterManager.h    # Random encounter management
+│   ├── language/
+│   │   ├── Word.h                # Esperanto word definition
+│   │   └── WordDatabase.h        # Vocabulary database by area
+│   ├── dialogue/
+│   │   ├── ConversationTopic.h   # Conversation choices for encounters
+│   │   └── TopicDatabase.h       # Conversation topic database
 │   └── util/
 │       ├── Vec2.h            # Immutable 2D vector
 │       └── Constants.h       # Game constants
@@ -84,7 +89,7 @@ rpg_seed/
 │   │   ├── player.png        # Player sprite sheet
 │   │   └── npcs.png          # NPC sprite sheet
 │   └── fonts/font.png        # Bitmap font
-├── tests/                    # Unit tests (551 total)
+├── tests/                    # Unit tests (494 total)
 └── docs/
     ├── CONTRIB.md            # Contributing guide
     └── RUNBOOK.md            # Operations runbook
@@ -102,7 +107,7 @@ Player movedPlayer = player.tryMove(Direction::Right, map);
 MenuState nextMenu = menuState.moveDown();
 PlayerStats healed = stats.withHP(stats.maxHp);
 Inventory updated = inventory.addItem(itemId, quantity);
-BattleState afterAttack = battle.selectAttack(damage, isCritical);
+BattleState afterTalk = battle.selectTalk(topic).chooseOption();
 ```
 
 ### RAII Resource Management
@@ -135,7 +140,8 @@ SDL2 resources are managed with RAII wrappers:
 | 3 | Menu System (pause menu, status display, player stats) | Complete |
 | 4 | Inventory System (Item, ItemDatabase, Inventory, ItemListBox) | Complete |
 | 5 | Save/Load System (SaveManager, SaveData, SaveSlotInfo) | Complete |
-| 6 | Battle System (Enemy, BattleState, DamageCalculator, EncounterManager) | Complete |
+| 6 | Battle System (Enemy, BattleState, EncounterManager) | Complete |
+| 7 | Esperanto Communication System (affinity-based encounters, conversation topics) | Complete |
 
 ## License
 

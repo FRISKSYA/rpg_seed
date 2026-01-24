@@ -81,6 +81,9 @@ private:
 
     // Setup NPCs for the current map
     void setupNPCs(const std::string& mapPath);
+
+    // Get personality for an encounter based on enemy type
+    Personality getEncounterPersonality(const std::string& enemyId);
 };
 
 #endif // GAME_H

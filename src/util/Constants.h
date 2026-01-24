@@ -104,6 +104,21 @@ namespace Constants {
     constexpr int BATTLE_ENEMY_AREA_WIDTH = 128;
     constexpr int BATTLE_ENEMY_AREA_HEIGHT = 96;
 
+    // Affinity bar (top area, next to enemy)
+    constexpr int BATTLE_AFFINITY_BAR_X = 8;
+    constexpr int BATTLE_AFFINITY_BAR_Y = 8;
+    constexpr int BATTLE_AFFINITY_BAR_WIDTH = 80;
+    constexpr int BATTLE_AFFINITY_BAR_HEIGHT = 20;
+    constexpr int BATTLE_AFFINITY_INNER_HEIGHT = 8;
+
+    // Conversation box (replaces message box during communication)
+    constexpr int BATTLE_CONVERSATION_BOX_X = 8;
+    constexpr int BATTLE_CONVERSATION_BOX_Y = INTERNAL_HEIGHT - 100;
+    constexpr int BATTLE_CONVERSATION_BOX_WIDTH = INTERNAL_WIDTH - 16;
+    constexpr int BATTLE_CONVERSATION_BOX_HEIGHT = 92;
+    constexpr int BATTLE_CHOICE_ITEM_HEIGHT = 20;
+    constexpr int BATTLE_CHOICE_START_Y = 36;  // Offset from box top for first choice
+
     // Window title
     constexpr const char* WINDOW_TITLE = "RPG Seed";
 }
